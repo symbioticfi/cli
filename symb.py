@@ -267,6 +267,74 @@ class SymbioticCLI:
 
         return results
 
+    def get_vault_ops(self, vault):
+        """Get all operators that are opted into a given vault."""
+        ops = self.get_ops()
+        w3_multicall = W3Multicall(self.w3)
+
+        for op in ops:
+            w3_multicall.add(
+                W3Multicall.Call(
+                    self.ADDRESSES["op_vault_opt_in"],
+                    "isOptedIn(address,address)(bool)",
+                    [op, vault],
+                )
+            )
+
+        optins = w3_multicall.call()
+        return [op for op, opted_in in zip(ops, optins) if opted_in]
+
+    def get_vault_nets(self, vault):
+        """Get all networks associated with a given vault."""
+        nets = self.get_nets()
+        w3_multicall = W3Multicall(self.w3)
+
+        w3_multicall.add(W3Multicall.Call(vault, "delegator()(address)"))
+        delegator = w3_multicall.call()[0]
+
+        w3_multicall = W3Multicall(self.w3)
+        for net in nets:
+            w3_multicall.add(
+                W3Multicall.Call(
+                    delegator,
+                    "maxNetworkLimit(bytes32)(uint256)",
+                    bytes.fromhex(net["net"][2:]),  # TODO: fix subnets
+                )
+            )
+
+        net_associations = w3_multicall.call()
+
+        return [
+            {
+                "net": net["net"],
+                "limit": associated,
+            }
+            for net, associated in zip(nets, net_associations)
+            if associated > 0
+        ]
+
+    def get_vault_nets_ops(self, vault):
+        """Get all operators opted into the vault and their associated networks."""
+        vault_ops = self.get_vault_ops(vault)
+        vault_nets = self.get_vault_nets(vault)
+
+        results = {}
+        for net in vault_nets:
+            w3_multicall = W3Multicall(self.w3)
+            for op in vault_ops:
+                w3_multicall.add(
+                    W3Multicall.Call(
+                        self.ADDRESSES["op_net_opt_in"],
+                        "isOptedIn(address,address)(bool)",
+                        [op, net["net"]],
+                    )
+                )
+            results[net["net"]] = [
+                op for op, opted_in in zip(vault_ops, w3_multicall.call()) if opted_in
+            ]
+
+        return results
+
     def print_indented(self, *args, indent=2):
         print(" " * indent + " ".join(map(str, args)))
 
@@ -499,6 +567,66 @@ def opstakes(ctx, address):
             f'Collateral {collateral} ({token_meta["symbol"]}): {stakes / 10 ** token_meta["decimals"]}',
             indent=2,
         )
+
+
+@cli.command()
+@click.argument("vault_address")
+@click.pass_context
+def vaultops(ctx, vault_address):
+    """List all operators opted into the given vault."""
+    vault_address = ctx.obj.normalize_address(vault_address)
+    ops = ctx.obj.get_vault_ops(vault_address)
+    print(f"Vault: {vault_address}")
+    print(f"Operators [{len(ops)} total]:")
+    for op in ops:
+        ctx.obj.print_indented(
+            f"Operator: {op}",
+            indent=2,
+        )
+
+
+@cli.command()
+@click.argument("vault_address")
+@click.pass_context
+def vaultnets(ctx, vault_address):
+    """List all networks associated with the given vault."""
+    vault_address = ctx.obj.normalize_address(vault_address)
+    nets = ctx.obj.get_vault_nets(vault_address)
+    print(f"Vault: {vault_address}")
+    print(f"Networks [{len(nets)} total]:")
+    for net in nets:
+        ctx.obj.print_indented(
+            f"Network: {net['net']}",
+            indent=2,
+        )
+
+
+@cli.command()
+@click.argument("vault_address")
+@click.pass_context
+def vaultnetsops(ctx, vault_address):
+    """List all operators and their associated networks for the given vault."""
+    vault_address = ctx.obj.normalize_address(vault_address)
+    nets_ops = ctx.obj.get_vault_nets_ops(vault_address)
+    print(f"Vault: {vault_address}")
+    print(f"Networks [{len(nets_ops)} total]:")
+    print("")
+
+    for net in nets_ops:
+        ctx.obj.print_indented(
+            f"Network: {net}",
+            indent=2,
+        )
+        ctx.obj.print_indented(
+            f"Operators [{len(nets_ops[net])} total]:",
+            indent=2,
+        )
+        for op in nets_ops[net]:
+            ctx.obj.print_indented(
+                f"Operator: {op}",
+                indent=4,
+            )
+        print("")
 
 
 if __name__ == "__main__":
