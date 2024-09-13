@@ -20,7 +20,7 @@ Commands:
   netops      List all operators opted in network
   nets        List all networks
   netstakes   Show stakes of all operators in network
-  opnets      List all networks operator is opted in
+  opnets      List all networks where operator is opted in
   ops         List all operators
   opstakes    Show operator stakes in all networks
   vaults      List all vaults

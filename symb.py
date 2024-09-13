@@ -311,7 +311,7 @@ def vaults():
 @cli.command()
 @click.argument('address')
 def opnets(address):
-    """List all networks operator is opted in"""
+    """List all networks where operator is opted in"""
     address = normalize_address(address)
     print (f'Operator: {address}')
 
