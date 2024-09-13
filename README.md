@@ -22,6 +22,6 @@ Commands:
   netstakes   Show stakes of all operators in network
   opnets      List all networks operator is opted in
   ops         List all operators
-  opstakes    Show stakes of all operators in network
+  opstakes    Show operator stakes in all networks
   vaults      List all vaults
 ```
