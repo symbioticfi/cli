@@ -20,6 +20,29 @@ ADDRESSES = {
     'vault_factory': '0x5035c15F3cb4364CF2cF35ca53E3d6FC45FC8899',
 }
 
+DELEGATOR_TYPES = {
+    0: 'NetworkRestake',
+    1: 'FullRestake',
+}
+
+SLASHER_TYPES = {
+    -1: 'NonSlashable',
+    0: 'InstantSlasher',
+    1: 'VetoSlasher',
+}
+
+def print_i2(*args):
+    print(' '*1, *args)
+
+def print_i4(*args):
+    print(' '*3, *args)
+
+def print_i6(*args):
+    print(' '*5, *args)
+
+def print_i8(*args):
+    print(' '*7, *args)
+
 CONTRACTS = {}
 
 PROVIDER = 'https://ethereum-holesky-rpc.publicnode.com'
@@ -173,8 +196,33 @@ def get_vaults():
             'vault': vaults[i],
             'collateral': collaterals[3 * i],
             'delegator': collaterals[3 * i + 1],
-            'slasher': collaterals[3 * i + 2]
+            'slasher': collaterals[3 * i + 2],
+            'delegator_type': -1,
+            'slasher_type': -1
         })
+
+    w3_multicall = W3Multicall(W3)
+    rev_result_idxs = []
+    for v_idx in range(len(results)):
+        w3_multicall.add(W3Multicall.Call(
+            results[v_idx]['delegator'],
+            'TYPE()(uint64)'
+        ))
+        rev_result_idxs.append((v_idx, 0))
+        if results[v_idx]['slasher'] != '0x0000000000000000000000000000000000000000':
+            w3_multicall.add(W3Multicall.Call(
+                results[v_idx]['slasher'],
+                'TYPE()(uint64)'
+            ))
+            rev_result_idxs.append((v_idx, 1))
+    
+    types = w3_multicall.call()
+    for i in range(len(rev_result_idxs)):
+        if rev_result_idxs[i][1] == 0:
+            results[rev_result_idxs[i][0]]['delegator_type'] = types[i]
+        elif rev_result_idxs[i][1] == 1:
+            results[rev_result_idxs[i][0]]['slasher_type'] = types[i]
+
     return results
 
 def get_net_vaults(net):
@@ -303,10 +351,10 @@ def vaults():
     vaults = get_vaults()
     print (f'All vaults [{len(vaults)} total]:')
     for vault in vaults:
-        print (f'  Vault: {vault["vault"]}')
-        print (f'    Collateral: {vault["collateral"]} ({get_token_meta(vault["collateral"])["symbol"]})')
-        print (f'    Delegator: {vault["delegator"]}')
-        print (f'    Slasher: {vault["slasher"]}\n')
+        print_i2 (f'Vault: {vault["vault"]}')
+        print_i4 (f'Collateral: {vault["collateral"]} ({get_token_meta(vault["collateral"])["symbol"]})')
+        print_i4 (f'Delegator: {vault["delegator"]} ({DELEGATOR_TYPES[vault["delegator_type"]]})')
+        print_i4 (f'Slasher: {vault["slasher"]} ({SLASHER_TYPES[vault["slasher_type"]]})\n')
 
 @cli.command()
 @click.argument('address')
@@ -330,7 +378,7 @@ def netops(address):
     ops = get_net_ops(address)
     print (f'Operators [{len(ops)} total]:')
     for op in ops:
-        print (f'  Operator: {op}')
+        print_i2 (f'Operator: {op}')
 
 @cli.command()
 @click.argument('address')
@@ -344,7 +392,7 @@ def netstakes(address):
     print (f'Operators [{len(opsvaults)} total]:')
     total_stakes = {}
     for op in opsvaults:
-        print (f'  Operator: {op["op"]}')
+        print_i2 (f'Operator: {op["op"]}')
         collaterals = {}
         for vault in op['vaults']:
             vault["token_meta"] = get_token_meta(vault["collateral"])
@@ -356,9 +404,11 @@ def netstakes(address):
         for collateral in collaterals.keys():
             stakes_sum = 0
             token_meta = get_token_meta(collateral)
-            print (f'    Collateral: {collateral} ({token_meta["symbol"]})')
+            print_i4 (f'Collateral: {collateral} ({token_meta["symbol"]})')
             for vault in collaterals[collateral]:
-                print (f'      Vault: {vault["vault"]} Stake: {vault["stake"] / 10**token_meta["decimals"]}')
+                print_i6 (f'Vault: {vault["vault"]}')
+                print_i8 (f'Type: {DELEGATOR_TYPES[vault["delegator_type"]]} / {SLASHER_TYPES[vault["slasher_type"]]}')
+                print_i8 (f'Stake: {vault["stake"] / 10**token_meta["decimals"]}')
                 stakes_sum += vault["stake"]
             total_op_stake += f'{stakes_sum / 10**token_meta["decimals"]} {token_meta["symbol"]} + '
             if collateral not in total_stakes:
@@ -366,15 +416,15 @@ def netstakes(address):
             total_stakes[collateral] += stakes_sum
 
         if total_op_stake:
-            print('    Total stake:', total_op_stake[:-3])
+            print_i4('Total stake:', total_op_stake[:-3])
         else:
-            print('    Total stake: 0')
+            print_i4('Total stake: 0')
         print('')
 
     print('Total stakes:')
     for collateral in total_stakes.keys():
         token_meta = get_token_meta(collateral)
-        print(f'  Collateral {collateral} ({token_meta["symbol"]}): {total_stakes[collateral] / 10**token_meta["decimals"]}')
+        print_i2(f'Collateral {collateral} ({token_meta["symbol"]}): {total_stakes[collateral] / 10**token_meta["decimals"]}')
 
 @cli.command()
 @click.argument('address')
@@ -387,7 +437,7 @@ def opstakes(address):
     print (f'Networks [{len(netsvaults)} total]:')
     total_stakes = {}
     for net in netsvaults:
-        print (f'  Network: {net["net"]}')
+        print_i2 (f'Network: {net["net"]}')
         collaterals = {}
         for vault in net['vaults']:
             vault["token_meta"] = get_token_meta(vault["collateral"])
@@ -399,9 +449,11 @@ def opstakes(address):
         for collateral in collaterals.keys():
             stakes_sum = 0
             token_meta = get_token_meta(collateral)
-            print (f'    Collateral: {collateral} ({token_meta["symbol"]})')
+            print_i4 (f'Collateral: {collateral} ({token_meta["symbol"]})')
             for vault in collaterals[collateral]:
-                print (f'      Vault: {vault["vault"]} Stake: {vault["stake"] / 10**token_meta["decimals"]}')
+                print_i6 (f'Vault: {vault["vault"]}')
+                print_i8 (f'Type: {DELEGATOR_TYPES[vault["delegator_type"]]} / {SLASHER_TYPES[vault["slasher_type"]]}')
+                print_i8 (f'Stake: {vault["stake"] / 10**token_meta["decimals"]}')
                 stakes_sum += vault["stake"]
             total_net_stake += f'{stakes_sum / 10**token_meta["decimals"]} {token_meta["symbol"]} + '
             if collateral not in total_stakes:
@@ -409,15 +461,15 @@ def opstakes(address):
             total_stakes[collateral] += stakes_sum
 
         if total_net_stake:
-            print('    Total stake:', total_net_stake[:-3])
+            print_i4('Total stake:', total_net_stake[:-3])
         else:
-            print('    Total stake: 0')
+            print_i4('Total stake: 0')
         print('')
 
     print('Total stakes:')
     for collateral in total_stakes.keys():
         token_meta = get_token_meta(collateral)
-        print(f'  Collateral {collateral} ({token_meta["symbol"]}): {total_stakes[collateral] / 10**token_meta["decimals"]}')
+        print_i2(f'Collateral {collateral} ({token_meta["symbol"]}): {total_stakes[collateral] / 10**token_meta["decimals"]}')
 
 
 if __name__ == '__main__':
