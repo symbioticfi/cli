@@ -379,7 +379,7 @@ def netstakes(address):
 @cli.command()
 @click.argument('address')
 def opstakes(address):
-    """Show stakes of all operators in network"""
+    """Show operator stakes in all networks"""
     address = normalize_address(address)
     print (f'Operator: {address}')
 
