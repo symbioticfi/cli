@@ -202,7 +202,7 @@ class SymbioticCLI:
         limits = w3_multicall.call()
         results = []
         for i, limit in enumerate(limits):
-            if limit > 0:
+            if limit and limit > 0:
                 vaults[i]["limit"] = limit
                 results.append(vaults[i])
 
