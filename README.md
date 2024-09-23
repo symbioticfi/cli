@@ -1,4 +1,6 @@
-# Symbiotic cli (symb)
+# Symbiotic CLI (symb)
+
+Simple CLI tool for fetching data from symbiotic core smart contracts.
 
 ## Install
 ```bash
