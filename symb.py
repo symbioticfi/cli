@@ -60,7 +60,10 @@ class SymbioticCLI:
             W3Multicall.Call(self.normalize_address(token), "decimals()(uint8)")
         )
         res = w3_multicall.call()
-        meta = {"symbol": res[0], "decimals": int(res[1])}
+        if not res[0] or not res[1]:
+            meta = {"symbol": "Unknown", "decimals": 0}
+        else:
+            meta = {"symbol": res[0], "decimals": int(res[1])}
         self._cache["token_meta"][token] = meta
         return meta
 
@@ -202,7 +205,7 @@ class SymbioticCLI:
         limits = w3_multicall.call()
         results = []
         for i, limit in enumerate(limits):
-            if limit > 0:
+            if limit and limit > 0:
                 vaults[i]["limit"] = limit
                 results.append(vaults[i])
 
