@@ -18,7 +18,7 @@ Options:
   --provider        TEXT  Ethereum provider URL [http(s)]
   --help                  Show this message and exit.
   --private-key     TEXT  Private key to sign transactions with (only for write functionality).
-  --ledger                Flag if to use a ledger to sign transactions (only for write functionality). Make sure to install Ledger Live and open the Ethereum app first.
+  --ledger                Flag if to use a ledger to sign transactions (only for write functionality). Make sure to install Ledger Live, open the Ethereum app, and enable the blind signing first.
   --ledger-address  TEXT  Address of the ledger's account to use to sign transactions (only for write functionality).
 
 
