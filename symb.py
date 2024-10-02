@@ -393,7 +393,7 @@ class SymbioticCLI:
 
     def send_raw_transaction_and_wait(self, rawTransaction):
         tx_hash = self.w3.eth.send_raw_transaction(rawTransaction)
-        print(f"Transaction sent: {tx_hash.hex()}")
+        print(f"Transaction sent: {tx_hash.hex()}, waiting...")
         return self.w3.eth.wait_for_transaction_receipt(tx_hash)
 
     def send_transaction(self, tx, private_key):
@@ -412,26 +412,37 @@ class SymbioticCLI:
         to,
         function_name,
         *args,
+        success_message="Success!",
     ):
-        if ledger_address:
-            ledger_address = self.normalize_address(ledger_address)
-
-        if ledger:
+        try:
             if ledger_address:
-                account = ledgereth.accounts.find_account(ledger_address)
+                ledger_address = self.normalize_address(ledger_address)
+
+            if ledger:
+                if ledger_address:
+                    account = ledgereth.accounts.find_account(ledger_address)
+                else:
+                    account = ledgereth.accounts.get_accounts()[0]
+
+                tx = self.get_transaction_ledger(
+                    account, entity, to, function_name, *args
+                )
+
+                tx_receipt = self.send_transaction_ledger(tx)
+
             else:
-                account = ledgereth.accounts.get_accounts()[0]
+                who = Account.from_key(private_key).address
 
-            tx = self.get_transaction_ledger(account, entity, to, function_name, *args)
+                tx = self.get_transaction(who, entity, to, function_name, *args)
 
-            return self.send_transaction_ledger(tx)
+                tx_receipt = self.send_transaction(tx, private_key)
 
-        else:
-            who = Account.from_key(private_key).address
+            print(success_message)
 
-            tx = self.get_transaction(who, entity, to, function_name, *args)
+            return tx_receipt
 
-            return self.send_transaction(tx, private_key)
+        except Exception as e:
+            print(f"Failed! Reason: {e}")
 
 
 # CLI Commands
@@ -736,19 +747,15 @@ def vaultnetsops(ctx, vault_address):
 def register_operator(ctx, private_key, ledger, ledger_address):
     """Register the signer as an operator."""
 
-    try:
-        ctx.obj.process_write_transaction(
-            private_key,
-            ledger,
-            ledger_address,
-            "op_registry",
-            ctx.obj.ADDRESSES["op_registry"],
-            "registerOperator",
-        )
-
-        print(f"Successfully registered as an operator")
-    except Exception as e:
-        print(f"Failed! Reason: {e}")
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        "op_registry",
+        ctx.obj.ADDRESSES["op_registry"],
+        "registerOperator",
+        success_message=f"Successfully registered as an operator",
+    )
 
 
 @cli.command()
@@ -763,19 +770,15 @@ def register_operator(ctx, private_key, ledger, ledger_address):
 def register_network(ctx, private_key, ledger, ledger_address):
     """Register the signer as a network."""
 
-    try:
-        ctx.obj.process_write_transaction(
-            private_key,
-            ledger,
-            ledger_address,
-            "net_registry",
-            ctx.obj.ADDRESSES["net_registry"],
-            "registerNetwork",
-        )
-
-        print(f"Successfully registered as a network")
-    except Exception as e:
-        print(f"Failed! Reason: {e}")
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        "net_registry",
+        ctx.obj.ADDRESSES["net_registry"],
+        "registerNetwork",
+        success_message=f"Successfully registered as a network",
+    )
 
 
 @cli.command()
@@ -798,21 +801,17 @@ def set_max_network_limit(
     delegator = ctx.obj.get_delegator(vault_address)
     delegator = ctx.obj.normalize_address(delegator)
 
-    try:
-        ctx.obj.process_write_transaction(
-            private_key,
-            ledger,
-            ledger_address,
-            "delegator",
-            delegator,
-            "setMaxNetworkLimit",
-            0,  # TODO: fix subnets
-            max_limit,
-        )
-
-        print(f"Successfully set max limit = {max_limit} in vault = {vault_address}")
-    except Exception as e:
-        print(f"Failed! Reason: {e}")
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        "delegator",
+        delegator,
+        "setMaxNetworkLimit",
+        0,  # TODO: fix subnets
+        max_limit,
+        success_message=f"Successfully set max limit = {max_limit} in vault = {vault_address}",
+    )
 
 
 @cli.command()
@@ -842,21 +841,17 @@ def set_network_limit(
         print("Delegator doesn't have such functionality.")
         return
 
-    try:
-        ctx.obj.process_write_transaction(
-            private_key,
-            ledger,
-            ledger_address,
-            ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
-            delegator,
-            "setNetworkLimit",
-            network_address + (64 - 40) * "0",
-            limit,
-        )
-
-        print(f"Successfully set limit = {limit} for network = {network_address}")
-    except Exception as e:
-        print(f"Failed! Reason: {e}")
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
+        delegator,
+        "setNetworkLimit",
+        network_address + (64 - 40) * "0",
+        limit,
+        success_message=f"Successfully set limit = {limit} for network = {network_address}",
+    )
 
 
 @cli.command()
@@ -895,24 +890,18 @@ def set_operator_network_limit(
         print("It is not a FullRestakeDelegator.")
         return
 
-    try:
-        ctx.obj.process_write_transaction(
-            private_key,
-            ledger,
-            ledger_address,
-            ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
-            delegator,
-            "setOperatorNetworkLimit",
-            network_address + (64 - 40) * "0",
-            operator_address,
-            limit,
-        )
-
-        print(
-            f"Successfully set limit = {limit} for operator = {operator_address} in network = {network_address}"
-        )
-    except Exception as e:
-        print(f"Failed! Reason: {e}")
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
+        delegator,
+        "setOperatorNetworkLimit",
+        network_address + (64 - 40) * "0",
+        operator_address,
+        limit,
+        success_message=f"Successfully set limit = {limit} for operator = {operator_address} in network = {network_address}",
+    )
 
 
 @cli.command()
@@ -951,24 +940,18 @@ def set_operator_network_shares(
         print("It is not a NetworkRestakeDelegator.")
         return
 
-    try:
-        ctx.obj.process_write_transaction(
-            private_key,
-            ledger,
-            ledger_address,
-            ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
-            delegator,
-            "setOperatorNetworkShares",
-            network_address + (64 - 40) * "0",
-            operator_address,
-            shares,
-        )
-
-        print(
-            f"Successfully set shares = {shares} for operator = {operator_address} in network = {network_address}"
-        )
-    except Exception as e:
-        print(f"Failed! Reason: {e}")
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
+        delegator,
+        "setOperatorNetworkShares",
+        network_address + (64 - 40) * "0",
+        operator_address,
+        shares,
+        success_message=f"Successfully set shares = {shares} for operator = {operator_address} in network = {network_address}",
+    )
 
 
 if __name__ == "__main__":
