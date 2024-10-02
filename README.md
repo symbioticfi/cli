@@ -36,6 +36,8 @@ Commands:
   vaultnetsops                 List all operators and their associated networks for the...
   vaultops                     List all operators opted into the given vault.
   vaults                       List all vaults
+  register-operator            Register as an operator.
+  register-network             Register as a network.
   set-max-network-limit        Set a maximum network limit (called by the network) at the given vault's delegator.
   set-network-limit            Set a network limit (called by the vault curator) at the given vault's delegator.
   set-operator-network-limit   Set an operator-network limit (called by the vault curator) at the given vault's FullRestakeDelegator.
