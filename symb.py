@@ -804,12 +804,18 @@ def vaultnetsops(ctx, vault_address):
 
 
 @cli.command()
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def register_network(ctx, private_key, ledger, ledger_address):
@@ -829,12 +835,18 @@ def register_network(ctx, private_key, ledger, ledger_address):
 @cli.command()
 @click.argument("vault_address", type=str)
 @click.argument("max_limit", type=int)
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_max_network_limit(
@@ -881,12 +893,18 @@ def resovler(ctx, vault_address, subnetwork):
 @cli.command()
 @click.argument("vault_address", type=str)
 @click.argument("resolver", type=str)
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_address):
@@ -946,12 +964,18 @@ Are you sure you want to remove the existing request, and create a new one with 
 @click.argument("vault_address", type=str)
 @click.argument("network_address", type=str)
 @click.argument("limit", type=int)
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_network_limit(
@@ -986,12 +1010,18 @@ def set_network_limit(
 @click.argument("network_address", type=str)
 @click.argument("operator_address", type=str)
 @click.argument("limit", type=int)
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_operator_network_limit(
@@ -1035,12 +1065,18 @@ def set_operator_network_limit(
 @click.argument("network_address", type=str)
 @click.argument("operator_address", type=str)
 @click.argument("shares", type=int)
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_operator_network_shares(
@@ -1080,12 +1116,18 @@ def set_operator_network_shares(
 
 
 @cli.command()
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def register_operator(ctx, private_key, ledger, ledger_address):
@@ -1104,12 +1146,18 @@ def register_operator(ctx, private_key, ledger, ledger_address):
 
 @cli.command()
 @click.argument("vault_address")
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
@@ -1130,12 +1178,18 @@ def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
 
 @cli.command()
 @click.argument("vault_address")
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_out_vault(ctx, vault_address, private_key, ledger, ledger_address):
@@ -1169,12 +1223,18 @@ def check_opt_in_vault(ctx, operator_address, vault_address):
 
 @cli.command()
 @click.argument("network_address")
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
@@ -1195,12 +1255,18 @@ def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
 
 @cli.command()
 @click.argument("network_address")
-@click.option("--private-key", type=str)
-@click.option("--ledger", is_flag=True)
+@click.option(
+    "--private-key", type=str, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
 @click.option(
     "--ledger-address",
     type=str,
-    help="Address of the account to use for signing (the first one if not provided)",
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
