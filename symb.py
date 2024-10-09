@@ -1,3 +1,7 @@
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="eth_utils")
+
 import click
 from web3 import Web3
 from w3multicall.multicall import W3Multicall
