@@ -1130,7 +1130,7 @@ def set_max_network_limit(
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
 def resovler(ctx, vault_address, network_address):
-    """Get the current resolver for a subnetwork in a vault.
+    """Get a current resolver for a subnetwork in a vault.
 
     \b
     VAULT_ADDRESS - an address of the vault to get a resolver for
@@ -1158,7 +1158,7 @@ def resovler(ctx, vault_address, network_address):
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
 def pending_resovler(ctx, vault_address, network_address):
-    """Get the current resolver for a subnetwork in a vault.
+    """Get a pending resolver for a subnetwork in a vault.
 
     \b
     VAULT_ADDRESS - an address of the vault to get a pending resolver for
@@ -1259,206 +1259,6 @@ Are you sure you want to remove the existing request, and create a new one with 
         resolver,
         "",
         success_message=f"Successfully set resolver = {resolver} for subnetwork = {bytes.fromhex(net[2:])} at vault = {vault_address}",
-    )
-
-
-### VAULT CURATOR CLI COMMANDS ###
-
-
-@cli.command()
-@click.argument("vault_address", type=address_type)
-@click.argument("network_address", type=address_type)
-@click.argument("limit", type=uint256_type)
-@click.option(
-    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
-)
-@click.option(
-    "--ledger",
-    is_flag=True,
-    help="Use a Ledger device for signing transactions instead of a private key",
-)
-@click.option(
-    "--ledger-address",
-    type=address_type,
-    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
-)
-@click.pass_context
-def set_network_limit(
-    ctx, vault_address, network_address, limit, private_key, ledger, ledger_address
-):
-    """Set a network limit at the vault's delegator.
-
-    \b
-    VAULT_ADDRESS - an address of the vault to adjust the delegations for
-    NETWORK_ADDRESS - an address of the network to set a limit for
-    LIMIT - a maximum amount of stake the network can get
-    """
-    vault_address = ctx.obj.normalize_address(vault_address)
-    network_address = ctx.obj.normalize_address(network_address)
-
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
-
-    delegator = ctx.obj.get_delegator(vault_address)
-    delegator_type = ctx.obj.get_entity_type(delegator)
-
-    if delegator_type not in [0, 1]:
-        print("Delegator doesn't have such functionality.")
-        return
-
-    ctx.obj.process_write_transaction(
-        private_key,
-        ledger,
-        ledger_address,
-        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
-        delegator,
-        "setNetworkLimit",
-        subnetwork,
-        limit,
-        success_message=f"Successfully set limit = {limit} for network = {network_address}",
-    )
-
-
-@cli.command()
-@click.argument("vault_address", type=address_type)
-@click.argument("network_address", type=address_type)
-@click.argument("operator_address", type=address_type)
-@click.argument("limit", type=uint256_type)
-@click.option(
-    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
-)
-@click.option(
-    "--ledger",
-    is_flag=True,
-    help="Use a Ledger device for signing transactions instead of a private key",
-)
-@click.option(
-    "--ledger-address",
-    type=address_type,
-    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
-)
-@click.pass_context
-def set_operator_network_limit(
-    ctx,
-    vault_address,
-    network_address,
-    operator_address,
-    limit,
-    private_key,
-    ledger,
-    ledger_address,
-):
-    """Set an operator-network limit at the vault's delegator.
-
-    \b
-    VAULT_ADDRESS - an address of the vault to adjust the delegations for
-    NETWORK_ADDRESS - an address of the network
-    OPERATOR_ADDRESS - an address of the operator to set a limit in the network for
-    LIMIT - a maximum amount of stake the operator can get in the network
-    """
-    vault_address = ctx.obj.normalize_address(vault_address)
-    network_address = ctx.obj.normalize_address(network_address)
-    operator_address = ctx.obj.normalize_address(operator_address)
-
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
-
-    delegator = ctx.obj.get_delegator(vault_address)
-    delegator_type = ctx.obj.get_entity_type(delegator)
-
-    if delegator_type != 1:
-        print("It is not a FullRestakeDelegator.")
-        return
-
-    ctx.obj.process_write_transaction(
-        private_key,
-        ledger,
-        ledger_address,
-        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
-        delegator,
-        "setOperatorNetworkLimit",
-        subnetwork,
-        operator_address,
-        limit,
-        success_message=f"Successfully set limit = {limit} for operator = {operator_address} in network = {network_address}",
-    )
-
-
-@cli.command()
-@click.argument("vault_address", type=address_type)
-@click.argument("network_address", type=address_type)
-@click.argument("operator_address", type=address_type)
-@click.argument("shares", type=uint256_type)
-@click.option(
-    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
-)
-@click.option(
-    "--ledger",
-    is_flag=True,
-    help="Use a Ledger device for signing transactions instead of a private key",
-)
-@click.option(
-    "--ledger-address",
-    type=address_type,
-    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
-)
-@click.pass_context
-def set_operator_network_shares(
-    ctx,
-    vault_address,
-    network_address,
-    operator_address,
-    shares,
-    private_key,
-    ledger,
-    ledger_address,
-):
-    """Set an operator-network shares at the vault's delegator.
-
-    \b
-    VAULT_ADDRESS - an address of the vault to adjust the delegations for
-    NETWORK_ADDRESS - an address of the network
-    OPERATOR_ADDRESS - an address of the operator to set shares in the network for
-    SHARES - an amount of shares (determine a percent = operator shares / total shares of the network stake the operator can get) to set for the operator
-    """
-    vault_address = ctx.obj.normalize_address(vault_address)
-    network_address = ctx.obj.normalize_address(network_address)
-    operator_address = ctx.obj.normalize_address(operator_address)
-
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
-
-    delegator = ctx.obj.get_delegator(vault_address)
-    delegator_type = ctx.obj.get_entity_type(delegator)
-
-    if delegator_type != 0:
-        print("It is not a NetworkRestakeDelegator.")
-        return
-
-    operator_network_shares = ctx.obj.get_operator_network_shares(
-        delegator, subnetwork, operator_address
-    )
-    total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
-        delegator, subnetwork
-    )
-    new_total_operator_network_shares = (
-        total_operator_network_shares - operator_network_shares + shares
-    )
-    percentage = shares / new_total_operator_network_shares * 100
-
-    if not ctx.obj.process_request(
-        f"Are you sure you want to make operator = {operator_address} to get {percentage}% of the subnetwork = {subnetwork} stake? (y/n)"
-    ):
-        return
-
-    ctx.obj.process_write_transaction(
-        private_key,
-        ledger,
-        ledger_address,
-        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
-        delegator,
-        "setOperatorNetworkShares",
-        subnetwork,
-        operator_address,
-        shares,
-        success_message=f"Successfully set shares = {shares} for operator = {operator_address} in network = {network_address}",
     )
 
 
@@ -1671,6 +1471,206 @@ def check_opt_in_network(ctx, operator_address, network_address):
         f"Operator = {operator_address} IS opted in to network = {network_address}"
         if ctx.obj.get_op_opted_in_net(operator_address, network_address)
         else f"Operator = {operator_address} IS NOT opted in to network = {network_address}"
+    )
+
+
+### VAULT CURATOR CLI COMMANDS ###
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("limit", type=uint256_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def set_network_limit(
+    ctx, vault_address, network_address, limit, private_key, ledger, ledger_address
+):
+    """Set a network limit at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    NETWORK_ADDRESS - an address of the network to set a limit for
+    LIMIT - a maximum amount of stake the network can get
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type not in [0, 1]:
+        print("Delegator doesn't have such functionality.")
+        return
+
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
+        delegator,
+        "setNetworkLimit",
+        subnetwork,
+        limit,
+        success_message=f"Successfully set limit = {limit} for network = {network_address}",
+    )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("operator_address", type=address_type)
+@click.argument("limit", type=uint256_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def set_operator_network_limit(
+    ctx,
+    vault_address,
+    network_address,
+    operator_address,
+    limit,
+    private_key,
+    ledger,
+    ledger_address,
+):
+    """Set an operator-network limit at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    NETWORK_ADDRESS - an address of the network
+    OPERATOR_ADDRESS - an address of the operator to set a limit in the network for
+    LIMIT - a maximum amount of stake the operator can get in the network
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+    operator_address = ctx.obj.normalize_address(operator_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type != 1:
+        print("It is not a FullRestakeDelegator.")
+        return
+
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
+        delegator,
+        "setOperatorNetworkLimit",
+        subnetwork,
+        operator_address,
+        limit,
+        success_message=f"Successfully set limit = {limit} for operator = {operator_address} in network = {network_address}",
+    )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("operator_address", type=address_type)
+@click.argument("shares", type=uint256_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def set_operator_network_shares(
+    ctx,
+    vault_address,
+    network_address,
+    operator_address,
+    shares,
+    private_key,
+    ledger,
+    ledger_address,
+):
+    """Set an operator-network shares at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    NETWORK_ADDRESS - an address of the network
+    OPERATOR_ADDRESS - an address of the operator to set shares in the network for
+    SHARES - an amount of shares (determine a percent = operator shares / total shares of the network stake the operator can get) to set for the operator
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+    operator_address = ctx.obj.normalize_address(operator_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type != 0:
+        print("It is not a NetworkRestakeDelegator.")
+        return
+
+    operator_network_shares = ctx.obj.get_operator_network_shares(
+        delegator, subnetwork, operator_address
+    )
+    total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
+        delegator, subnetwork
+    )
+    new_total_operator_network_shares = (
+        total_operator_network_shares - operator_network_shares + shares
+    )
+    percentage = shares / new_total_operator_network_shares * 100
+
+    if not ctx.obj.process_request(
+        f"Are you sure you want to make operator = {operator_address} to get {percentage}% of the subnetwork = {subnetwork} stake? (y/n)"
+    ):
+        return
+
+    ctx.obj.process_write_transaction(
+        private_key,
+        ledger,
+        ledger_address,
+        ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
+        delegator,
+        "setOperatorNetworkShares",
+        subnetwork,
+        operator_address,
+        shares,
+        success_message=f"Successfully set shares = {shares} for operator = {operator_address} in network = {network_address}",
     )
 
 
