@@ -5,9 +5,105 @@ import ledgereth
 from eth_account import Account
 from time import time
 from datetime import datetime
+import re
+
+
+class AddressType(click.ParamType):
+    name = "ethereum_address"
+    pattern = re.compile(r"^0x[0-9a-fA-F]{40}$")
+
+    def convert(self, value, param, ctx):
+        if self.pattern.match(value):
+            return value
+        else:
+            self.fail(f"{value} is not a valid address", param, ctx)
+
+
+class Bytes32Type(click.ParamType):
+    name = "bytes32"
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, bytes):
+            if len(value) == 32:
+                return value
+            else:
+                self.fail(f"{value} is not 32 bytes", param, ctx)
+        elif isinstance(value, str):
+            if value.startswith("0x"):
+                value = value[2:]
+            if len(value) != 64 or not re.fullmatch(r"[0-9a-fA-F]{64}", value):
+                self.fail(f"{value} is not a valid bytes32 hex string", param, ctx)
+            try:
+                return bytes.fromhex(value)
+            except ValueError:
+                self.fail(f"{value} is not a valid hex string", param, ctx)
+        else:
+            self.fail(f"Invalid input: {value}", param, ctx)
+
+
+class Uint256Type(click.ParamType):
+    name = "uint256"
+
+    def convert(self, value, param, ctx):
+        try:
+            ivalue = int(value)
+            if 0 <= ivalue <= 2**256 - 1:
+                return ivalue
+            else:
+                self.fail(
+                    f"{value} is not a valid uint256 (must be between 0 and 2^256 - 1)",
+                    param,
+                    ctx,
+                )
+        except ValueError:
+            self.fail(f"{value} is not a valid integer", param, ctx)
+
+
+class Uint96Type(click.ParamType):
+    name = "uint96"
+
+    def convert(self, value, param, ctx):
+        try:
+            ivalue = int(value)
+            if 0 <= ivalue <= 2**96 - 1:
+                return ivalue
+            else:
+                self.fail(
+                    f"{value} is not a valid uint96 (must be between 0 and 2^96 - 1)",
+                    param,
+                    ctx,
+                )
+        except ValueError:
+            self.fail(f"{value} is not a valid integer", param, ctx)
+
+
+class Uint48Type(click.ParamType):
+    name = "uint48"
+
+    def convert(self, value, param, ctx):
+        try:
+            ivalue = int(value)
+            if 0 <= ivalue <= 2**48 - 1:
+                return ivalue
+            else:
+                self.fail(
+                    f"{value} is not a valid uint48 (must be between 0 and 2^48 - 1)",
+                    param,
+                    ctx,
+                )
+        except ValueError:
+            self.fail(f"{value} is not a valid integer", param, ctx)
+
+
+address_type = AddressType()
+bytes32_type = Bytes32Type()
+uint256_type = Uint256Type()
+uint96_type = Uint96Type()
+uint48_type = Uint48Type()
 
 
 class SymbioticCLI:
+
     ABIS = {
         "op_registry": '[{"inputs":[],"name":"EntityNotExist","type":"error"},{"inputs":[],"name":"OperatorAlreadyRegistered","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"entity","type":"address"}],"name":"AddEntity","type":"event"},{"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"entity","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"entity_","type":"address"}],"name":"isEntity","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"registerOperator","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"totalEntities","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]',
         "net_registry": '[{"inputs":[],"name":"EntityNotExist","type":"error"},{"inputs":[],"name":"NetworkAlreadyRegistered","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"entity","type":"address"}],"name":"AddEntity","type":"event"},{"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"entity","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"entity_","type":"address"}],"name":"isEntity","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"registerNetwork","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"totalEntities","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]',
@@ -372,25 +468,23 @@ class SymbioticCLI:
         """Check if an operator is opted into a network."""
         return self.contracts["op_net_opt_in"].functions.isOptedIn(operator, net).call()
 
-    def get_resolver(self, slasher_address, subnet):
+    def get_resolver(self, slasher_address, subnetwork):
         net = self.normalize_address(net)
         return self.normalize_address(
-            self.get_data("veto_slasher", slasher_address, "resolver", subnet, "")
+            self.get_data("veto_slasher", slasher_address, "resolver", subnetwork, "")
         )
 
     def get_resolver_set_epoch_delay(self, slasher_address):
-        net = self.normalize_address(net)
         return self.get_data("veto_slasher", slasher_address, "resolverSetEpochsDelay")
 
-    def get_pending_resolver(self, slasher_address, subnet):
-        net = self.normalize_address(net)
+    def get_pending_resolver(self, slasher_address, subnetwork):
         timestmap = time() + 10 * 365 * 24 * 60 * 60  # 10 years in the future
         return self.normalize_address(
             self.get_data(
                 "veto_slasher",
                 slasher_address,
                 "resolverAt",
-                subnet,
+                subnetwork,
                 timestmap,
                 "",
             )
@@ -407,6 +501,57 @@ class SymbioticCLI:
     def get_vault_current_epoch_start(self, vault_address):
         vault_address = self.normalize_address(vault_address)
         return self.get_data("vault", vault_address, "currentEpochStart")
+
+    def get_network_limit(self, delegator_address, subnetwork):
+        delegator_address = self.normalize_address(delegator_address)
+        return self.get_data(
+            "full_restake_delegator", delegator_address, "networkLimit", subnetwork
+        )
+
+    def get_operator_network_limit(
+        self, delegator_address, subnetwork, operator_address
+    ):
+        delegator_address = self.normalize_address(delegator_address)
+        operator_address = self.normalize_address(operator_address)
+        return self.get_data(
+            "full_restake_delegator",
+            delegator_address,
+            "operatorNetworkLimit",
+            subnetwork,
+            operator_address,
+        )
+
+    def get_operator_network_shares(
+        self, delegator_address, subnetwork, operator_address
+    ):
+        delegator_address = self.normalize_address(delegator_address)
+        operator_address = self.normalize_address(operator_address)
+        return self.get_data(
+            "network_restake_delegator",
+            delegator_address,
+            "operatorNetworkShares",
+            subnetwork,
+            operator_address,
+        )
+
+    def get_total_operator_network_shares(self, delegator_address, subnetwork):
+        delegator_address = self.normalize_address(delegator_address)
+        return self.get_data(
+            "network_restake_delegator",
+            delegator_address,
+            "totalOperatorNetworkShares",
+            subnetwork,
+        )
+
+    def get_stake(self, vault_address, subnetwork, operator_address):
+        vault_address = self.normalize_address(vault_address)
+        operator_address = self.normalize_address(operator_address)
+
+        delegator_address = self.get_delegator(vault_address)
+
+        return self.get_data(
+            "delegator", delegator_address, "stake", subnetwork, operator_address
+        )
 
     def print_indented(self, *args, indent=2):
         print(" " * indent + " ".join(map(str, args)))
@@ -512,8 +657,19 @@ class SymbioticCLI:
         except Exception as e:
             print(f"Failed! Reason: {e}")
 
+    def process_request(self, request_text):
+        response = input(f"{request_text}")
 
-# CLI Commands
+        if response != "y":
+            print("Cancel")
+            return False
+        else:
+            return True
+
+
+### GENERAL CLI COMMANDS ###
+
+
 @click.group()
 @click.option(
     "--provider",
@@ -525,115 +681,79 @@ def cli(ctx, provider):
     ctx.obj = SymbioticCLI(provider)
 
 
-@cli.command()
-@click.argument("address")
-@click.pass_context
-def isop(ctx, address):
-    """Check if address is operator"""
-    address = ctx.obj.normalize_address(address)
-    is_op = ctx.obj.contracts["op_registry"].functions.isEntity(address).call()
-    print(is_op)
+## GENERAL NETWORK RELATED CLI COMMANDS ##
 
 
 @cli.command()
-@click.argument("address")
+@click.argument("address", type=address_type)
 @click.pass_context
 def isnet(ctx, address):
-    """Check if address is network"""
+    """Check if address is network.
+
+    \b
+    ADDRESS - an address to check
+    """
     address = ctx.obj.normalize_address(address)
     is_net = ctx.obj.contracts["net_registry"].functions.isEntity(address).call()
     print(is_net)
 
 
 @cli.command()
-@click.argument("address")
+@click.argument("network_address", type=address_type)
 @click.pass_context
-def middleware(ctx, address):
-    """Get network middleware address"""
-    address = ctx.obj.normalize_address(address)
-    middleware_address = ctx.obj.get_middleware(address)
+def middleware(ctx, network_address):
+    """Get network middleware address.
+
+    \b
+    NETWORK_ADDRESS - an address of the vault to get a middleware for
+    """
+    network_address = ctx.obj.normalize_address(network_address)
+    middleware_address = ctx.obj.get_middleware(network_address)
     print(middleware_address)
 
 
 @cli.command()
 @click.pass_context
 def nets(ctx):
-    """List all networks"""
+    """List all networks."""
     nets = ctx.obj.get_nets()
     print(f"All networks [{len(nets)} total]:")
     for net in nets:
-        print(f'  Network: {net["net"]}')
-        print(f'    Middleware: {net["middleware"]}\n')
+        ctx.obj.print_indented(f'Network: {net["net"]}', indent=2)
+        ctx.obj.print_indented(f'Middleware: {net["middleware"]}\n', indent=4)
 
 
 @cli.command()
+@click.argument("network_address", type=address_type)
 @click.pass_context
-def ops(ctx):
-    """List all operators"""
-    ops = ctx.obj.get_ops()
-    print(f"All operators [{len(ops)} total]:")
-    for op in ops:
-        print(f"  Operator: {op}")
+def netops(ctx, network_address):
+    """List all operators opted in network.
 
-
-@cli.command()
-@click.pass_context
-def vaults(ctx):
-    """List all vaults"""
-    vaults = ctx.obj.get_vaults()
-    print(f"All vaults [{len(vaults)} total]:")
-    for vault in vaults:
-        ctx.obj.print_indented(f'Vault: {vault["vault"]}')
-        collateral_meta = ctx.obj.get_token_meta(vault["collateral"])
-        ctx.obj.print_indented(
-            f'Collateral: {vault["collateral"]} ({collateral_meta["symbol"]})', indent=4
-        )
-        ctx.obj.print_indented(
-            f'Delegator: {vault["delegator"]} ({ctx.obj.DELEGATOR_TYPES_NAMES.get(vault["delegator_type"], "Unknown")})',
-            indent=4,
-        )
-        slasher_type = ctx.obj.SLASHER_TYPES_NAMES.get(vault["slasher_type"], "Unknown")
-        ctx.obj.print_indented(
-            f'Slasher: {vault["slasher"]} ({slasher_type})\n', indent=4
-        )
-
-
-@cli.command()
-@click.argument("address")
-@click.pass_context
-def opnets(ctx, address):
-    """List all networks where operator is opted in"""
-    address = ctx.obj.normalize_address(address)
-    print(f"Operator: {address}")
-    nets = ctx.obj.get_op_nets(address)
-    print(f"Networks [{len(nets)} total]:")
-    for net in nets:
-        print(f'  Network: {net["net"]}')
-
-
-@cli.command()
-@click.argument("address")
-@click.pass_context
-def netops(ctx, address):
-    """List all operators opted in network"""
-    address = ctx.obj.normalize_address(address)
-    print(f"Network: {address}")
-    ops = ctx.obj.get_net_ops(address)
+    \b
+    NETWORK_ADDRESS - an address of the network to get operators for
+    """
+    network_address = ctx.obj.normalize_address(network_address)
+    print(f"Network: {network_address}")
+    ops = ctx.obj.get_net_ops(network_address)
     print(f"Operators [{len(ops)} total]:")
     for op in ops:
         ctx.obj.print_indented(f"Operator: {op}")
 
 
 @cli.command()
-@click.argument("address")
+@click.argument("network_address", type=address_type)
 @click.pass_context
-def netstakes(ctx, address):
-    """Show stakes of all operators in network"""
-    address = ctx.obj.normalize_address(address)
-    print(f"Network: {address}")
-    print(f"Middleware: {ctx.obj.get_middleware(address)}")
+def netstakes(ctx, network_address):
+    """Show stakes of all operators in network.
 
-    opsvaults = ctx.obj.get_net_ops_vaults(address)
+    \b
+    NETWORK_ADDRESS - an address of the network to get a whole stake for
+    """
+    network_address = ctx.obj.normalize_address(network_address)
+    print(f"Network: {network_address}")
+    print(f"Middleware: {ctx.obj.get_middleware(network_address)}")
+
+    opsvaults = ctx.obj.get_net_ops_vaults(network_address)
     print(f"Operators [{len(opsvaults)} total]:")
     total_stakes = {}
     for op in opsvaults:
@@ -684,15 +804,102 @@ def netstakes(ctx, address):
         )
 
 
-@cli.command()
-@click.argument("address")
-@click.pass_context
-def opstakes(ctx, address):
-    """Show operator stakes in all networks"""
-    address = ctx.obj.normalize_address(address)
-    print(f"Operator: {address}")
+## GENERAL OPERATOR RELATED CLI COMMANDS ##
 
-    netsvaults = ctx.obj.get_op_nets_vaults(address)
+
+@cli.command()
+@click.argument("address", type=address_type)
+@click.pass_context
+def isop(ctx, address):
+    """Check if address is operator."""
+    address = ctx.obj.normalize_address(address)
+    is_op = ctx.obj.contracts["op_registry"].functions.isEntity(address).call()
+    print(is_op)
+
+
+@cli.command()
+@click.pass_context
+def ops(ctx):
+    """List all operators."""
+    ops = ctx.obj.get_ops()
+    print(f"All operators [{len(ops)} total]:")
+    for op in ops:
+        ctx.obj.print_indented(f"Operator: {op}", indent=2)
+
+
+@cli.command()
+@click.argument("operator_address", type=address_type)
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.pass_context
+def op_vault_net_stake(ctx, operator_address, vault_address, network_address):
+    """Get operator stake in vault for network.
+
+    \b
+    \b
+    OPERATOR_ADDRESS - an address of the operator to get a stake of
+    VAULT_ADDRESS - an address of the vault to get a stake at
+    NETWORK_ADDRESS - an address of the network to get a stake for
+    """
+    operator_address = ctx.obj.normalize_address(operator_address)
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+
+    stake = ctx.obj.get_stake(vault_address, subnetwork, operator_address)
+
+    if delegator_type == 0:
+        operator_network_shares = ctx.obj.get_operator_network_shares(
+            delegator, subnetwork, operator_address
+        )
+        total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
+            delegator, subnetwork
+        )
+        percent = operator_network_shares / total_operator_network_shares * 100
+
+        print(
+            f"Operator stake in vault = {vault_address} for subnetwork = {subnetwork} is {stake} which is {percent}% ({operator_network_shares} / {total_operator_network_shares} in shares) of network stake"
+        )
+    else:
+        print(
+            f"Operator stake in vault = {vault_address} for subnetwork = {subnetwork} is {stake}"
+        )
+
+
+@cli.command()
+@click.argument("operator_address", type=address_type)
+@click.pass_context
+def opnets(ctx, operator_address):
+    """List all networks where operator is opted in.
+
+    \b
+    OPERATOR_ADDRESS - an address of the operator to get networks for
+    """
+    operator_address = ctx.obj.normalize_address(operator_address)
+    print(f"Operator: {operator_address}")
+    nets = ctx.obj.get_op_nets(operator_address)
+    print(f"Networks [{len(nets)} total]:")
+    for net in nets:
+        print(f'  Network: {net["net"]}')
+
+
+@cli.command()
+@click.argument("operator_address", type=address_type)
+@click.pass_context
+def opstakes(ctx, operator_address):
+    """Show operator stakes in all networks.
+
+    \b
+    OPERATOR_ADDRESS - an address of the operator to get a whole stake for
+    """
+    operator_address = ctx.obj.normalize_address(operator_address)
+    print(f"Operator: {operator_address}")
+
+    netsvaults = ctx.obj.get_op_nets_vaults(operator_address)
     print(f"Networks [{len(netsvaults)} total]:")
     total_stakes = {}
     for net in netsvaults:
@@ -743,11 +950,40 @@ def opstakes(ctx, address):
         )
 
 
+## GENERAL VAULT RELATED CLI COMMANDS ##
+
+
 @cli.command()
-@click.argument("vault_address")
+@click.pass_context
+def vaults(ctx):
+    """List all vaults."""
+    vaults = ctx.obj.get_vaults()
+    print(f"All vaults [{len(vaults)} total]:")
+    for vault in vaults:
+        ctx.obj.print_indented(f'Vault: {vault["vault"]}')
+        collateral_meta = ctx.obj.get_token_meta(vault["collateral"])
+        ctx.obj.print_indented(
+            f'Collateral: {vault["collateral"]} ({collateral_meta["symbol"]})', indent=4
+        )
+        ctx.obj.print_indented(
+            f'Delegator: {vault["delegator"]} ({ctx.obj.DELEGATOR_TYPES_NAMES.get(vault["delegator_type"], "Unknown")})',
+            indent=4,
+        )
+        slasher_type = ctx.obj.SLASHER_TYPES_NAMES.get(vault["slasher_type"], "Unknown")
+        ctx.obj.print_indented(
+            f'Slasher: {vault["slasher"]} ({slasher_type})\n', indent=4
+        )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
 @click.pass_context
 def vaultops(ctx, vault_address):
-    """List all operators opted into the given vault."""
+    """List all operators opted into the given vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get all operators for
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     ops = ctx.obj.get_vault_ops(vault_address)
     print(f"Vault: {vault_address}")
@@ -760,10 +996,14 @@ def vaultops(ctx, vault_address):
 
 
 @cli.command()
-@click.argument("vault_address")
+@click.argument("vault_address", type=address_type)
 @click.pass_context
 def vaultnets(ctx, vault_address):
-    """List all networks associated with the given vault."""
+    """List all networks associated with the given vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get all networks for
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     nets = ctx.obj.get_vault_nets(vault_address)
     print(f"Vault: {vault_address}")
@@ -776,10 +1016,14 @@ def vaultnets(ctx, vault_address):
 
 
 @cli.command()
-@click.argument("vault_address")
+@click.argument("vault_address", type=address_type)
 @click.pass_context
 def vaultnetsops(ctx, vault_address):
-    """List all operators and their associated networks for the given vault."""
+    """List all operators and their associated networks for the given vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     nets_ops = ctx.obj.get_vault_nets_ops(vault_address)
     print(f"Vault: {vault_address}")
@@ -803,9 +1047,12 @@ def vaultnetsops(ctx, vault_address):
         print("")
 
 
+### NETWORK CURATOR CLI COMMANDS ###
+
+
 @cli.command()
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -814,7 +1061,7 @@ def vaultnetsops(ctx, vault_address):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
@@ -833,10 +1080,10 @@ def register_network(ctx, private_key, ledger, ledger_address):
 
 
 @cli.command()
-@click.argument("vault_address", type=str)
-@click.argument("max_limit", type=int)
+@click.argument("vault_address", type=address_type)
+@click.argument("max_limit", type=uint256_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -845,14 +1092,19 @@ def register_network(ctx, private_key, ledger, ledger_address):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_max_network_limit(
     ctx, vault_address, max_limit, private_key, ledger, ledger_address
 ):
-    """Set a maximum network limit at the vault's delegator."""
+    """Set a maximum network limit at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to set a maximum limit for
+    MAX_LIMIT - a maximum amount of stake a network is ready to get from the vault
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
 
     delegator = ctx.obj.get_delegator(vault_address)
@@ -871,11 +1123,19 @@ def set_max_network_limit(
 
 
 @cli.command()
-@click.argument("vault_address", type=str)
-@click.argument("subnetwork", type=str)
-def resovler(ctx, vault_address, subnetwork):
-    """Get the current resolver for a subnetwork in a vault."""
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+def resovler(ctx, vault_address, network_address):
+    """Get the current resolver for a subnetwork in a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get a resolver for
+    NETWORK_ADDRESS - an address of the network to get a resolver for
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
 
     slasher = ctx.obj.get_slasher(vault_address)
     slasher_type = ctx.obj.get_entity_type(slasher)
@@ -891,10 +1151,45 @@ def resovler(ctx, vault_address, subnetwork):
 
 
 @cli.command()
-@click.argument("vault_address", type=str)
-@click.argument("resolver", type=str)
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+def pending_resovler(ctx, vault_address, network_address):
+    """Get the current resolver for a subnetwork in a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get a pending resolver for
+    NETWORK_ADDRESS - an address of the network to get a pending resolver for
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+
+    slasher = ctx.obj.get_slasher(vault_address)
+    slasher_type = ctx.obj.get_entity_type(slasher)
+
+    if slasher_type != 1:
+        print("It is not a VetoSlasher.")
+        return
+
+    resolver = ctx.obj.get_resolver(slasher, subnetwork)
+    pending_resolver = ctx.obj.get_pending_resolver(slasher, subnetwork)
+
+    if resolver == pending_resolver:
+        print(
+            f"There is no pending resolver for subnetwork = {subnetwork} at vault {vault_address}"
+        )
+    else:
+        print(
+            f"Pending resolver for subnetwork = {subnetwork} at vault {vault_address} is {pending_resolver}"
+        )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("resolver", type=address_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -903,12 +1198,17 @@ def resovler(ctx, vault_address, subnetwork):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_address):
-    """Set a resolver for a subnetwork at VetoSlasher."""
+    """Set a resolver for a subnetwork at VetoSlasher.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to set a resolver for
+    RESOLVER - an address of the resolver to set
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     resolver = ctx.obj.normalize_address(resolver)
 
@@ -937,13 +1237,11 @@ def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_addre
     )
 
     if current_resolver != pending_resolver:
-        response = input(
+        if not ctx.obj.process_request(
             f"""You have a pending set resolver request for {pending_resolver}.
 Are you sure you want to remove the existing request, and create a new one with a new set timestamp = {new_datetime}? (y/n)
 """
-        )
-
-        if response != "y":
+        ):
             return
 
     ctx.obj.process_write_transaction(
@@ -960,12 +1258,15 @@ Are you sure you want to remove the existing request, and create a new one with 
     )
 
 
+### VAULT CURATOR CLI COMMANDS ###
+
+
 @cli.command()
-@click.argument("vault_address", type=str)
-@click.argument("network_address", type=str)
-@click.argument("limit", type=int)
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("limit", type=uint256_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -974,16 +1275,24 @@ Are you sure you want to remove the existing request, and create a new one with 
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def set_network_limit(
     ctx, vault_address, network_address, limit, private_key, ledger, ledger_address
 ):
-    """Set a network limit at the vault's delegator."""
+    """Set a network limit at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    NETWORK_ADDRESS - an address of the network to set a limit for
+    LIMIT - a maximum amount of stake the network can get
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
 
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
@@ -999,19 +1308,19 @@ def set_network_limit(
         ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
         delegator,
         "setNetworkLimit",
-        network_address + (64 - 40) * "0",
+        subnetwork,
         limit,
         success_message=f"Successfully set limit = {limit} for network = {network_address}",
     )
 
 
 @cli.command()
-@click.argument("vault_address", type=str)
-@click.argument("network_address", type=str)
-@click.argument("operator_address", type=str)
-@click.argument("limit", type=int)
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("operator_address", type=address_type)
+@click.argument("limit", type=uint256_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1020,7 +1329,7 @@ def set_network_limit(
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
@@ -1034,10 +1343,19 @@ def set_operator_network_limit(
     ledger,
     ledger_address,
 ):
-    """Set a operator-network limit at the vault's delegator."""
+    """Set an operator-network limit at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    NETWORK_ADDRESS - an address of the network
+    OPERATOR_ADDRESS - an address of the operator to set a limit in the network for
+    LIMIT - a maximum amount of stake the operator can get in the network
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
     operator_address = ctx.obj.normalize_address(operator_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
 
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
@@ -1053,7 +1371,7 @@ def set_operator_network_limit(
         ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
         delegator,
         "setOperatorNetworkLimit",
-        network_address + (64 - 40) * "0",
+        subnetwork,
         operator_address,
         limit,
         success_message=f"Successfully set limit = {limit} for operator = {operator_address} in network = {network_address}",
@@ -1061,12 +1379,12 @@ def set_operator_network_limit(
 
 
 @cli.command()
-@click.argument("vault_address", type=str)
-@click.argument("network_address", type=str)
-@click.argument("operator_address", type=str)
-@click.argument("shares", type=int)
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("operator_address", type=address_type)
+@click.argument("shares", type=uint256_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1075,7 +1393,7 @@ def set_operator_network_limit(
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
@@ -1089,16 +1407,41 @@ def set_operator_network_shares(
     ledger,
     ledger_address,
 ):
-    """Set a operator-network shares at the vault's delegator."""
+    """Set an operator-network shares at the vault's delegator.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    NETWORK_ADDRESS - an address of the network
+    OPERATOR_ADDRESS - an address of the operator to set shares in the network for
+    SHARES - an amount of shares (determine a percent = operator shares / total shares of the network stake the operator can get) to set for the operator
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
     operator_address = ctx.obj.normalize_address(operator_address)
+
+    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
 
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
 
     if delegator_type != 0:
         print("It is not a NetworkRestakeDelegator.")
+        return
+
+    operator_network_shares = ctx.obj.get_operator_network_shares(
+        delegator, subnetwork, operator_address
+    )
+    total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
+        delegator, subnetwork
+    )
+    new_total_operator_network_shares = (
+        total_operator_network_shares - operator_network_shares + shares
+    )
+    percentage = shares / new_total_operator_network_shares * 100
+
+    if not ctx.obj.process_request(
+        f"Are you sure you want to make operator = {operator_address} to get {percentage}% of the subnetwork = {subnetwork} stake? (y/n)"
+    ):
         return
 
     ctx.obj.process_write_transaction(
@@ -1108,16 +1451,19 @@ def set_operator_network_shares(
         ctx.obj.DELEGATOR_TYPES_ENTITIES[delegator_type],
         delegator,
         "setOperatorNetworkShares",
-        network_address + (64 - 40) * "0",
+        subnetwork,
         operator_address,
         shares,
         success_message=f"Successfully set shares = {shares} for operator = {operator_address} in network = {network_address}",
     )
 
 
+### OPERATOR CLI COMMANDS ###
+
+
 @cli.command()
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1126,7 +1472,7 @@ def set_operator_network_shares(
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
@@ -1145,9 +1491,9 @@ def register_operator(ctx, private_key, ledger, ledger_address):
 
 
 @cli.command()
-@click.argument("vault_address")
+@click.argument("vault_address", type=address_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1156,12 +1502,16 @@ def register_operator(ctx, private_key, ledger, ledger_address):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
-    """Opt-in to a vault."""
+    """Opt-in to a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to opt into
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
 
     ctx.obj.process_write_transaction(
@@ -1177,9 +1527,9 @@ def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
 
 
 @cli.command()
-@click.argument("vault_address")
+@click.argument("vault_address", type=address_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1188,12 +1538,16 @@ def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_out_vault(ctx, vault_address, private_key, ledger, ledger_address):
-    """Opt-out from a vault."""
+    """Opt-out from a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to opt out from
+    """
     vault_address = ctx.obj.normalize_address(vault_address)
 
     ctx.obj.process_write_transaction(
@@ -1209,11 +1563,16 @@ def opt_out_vault(ctx, vault_address, private_key, ledger, ledger_address):
 
 
 @cli.command()
-@click.argument("operator_address")
-@click.argument("vault_address")
+@click.argument("operator_address", type=address_type)
+@click.argument("vault_address", type=address_type)
 @click.pass_context
 def check_opt_in_vault(ctx, operator_address, vault_address):
-    """Check if is opted in to a vault."""
+    """Check if is opted in to a vault.
+
+    \b
+    OPERATOR_ADDRESS - an address of the operator to check an opt-in status of
+    VAULT_ADDRESS - an address of the vault to check an opt-in status for
+    """
     print(
         f"Operator = {operator_address} IS opted in to vault = {vault_address}"
         if ctx.obj.get_op_opted_in_vault(operator_address, vault_address)
@@ -1222,9 +1581,9 @@ def check_opt_in_vault(ctx, operator_address, vault_address):
 
 
 @cli.command()
-@click.argument("network_address")
+@click.argument("network_address", type=address_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1233,12 +1592,16 @@ def check_opt_in_vault(ctx, operator_address, vault_address):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
-    """Opt-in to a network."""
+    """Opt-in to a network.
+
+    \b
+    NETWORK_ADDRESS - an address of the network to opt into
+    """
     network_address = ctx.obj.normalize_address(network_address)
 
     ctx.obj.process_write_transaction(
@@ -1254,9 +1617,9 @@ def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
 
 
 @cli.command()
-@click.argument("network_address")
+@click.argument("network_address", type=address_type)
 @click.option(
-    "--private-key", type=str, help="Your private key for signing transactions"
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
 @click.option(
     "--ledger",
@@ -1265,12 +1628,16 @@ def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
 )
 @click.option(
     "--ledger-address",
-    type=str,
+    type=address_type,
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
 def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
-    """Opt-out from a vault."""
+    """Opt-out from a network.
+
+    \b
+    NETWORK_ADDRESS - an address of the network to opt out
+    """
     network_address = ctx.obj.normalize_address(network_address)
 
     ctx.obj.process_write_transaction(
@@ -1281,16 +1648,21 @@ def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
         ctx.obj.ADDRESSES["op_net_opt_in"],
         "optOut",
         network_address,
-        success_message=f"Successfully opted in to network = {network_address}",
+        success_message=f"Successfully opted out from network = {network_address}",
     )
 
 
 @cli.command()
-@click.argument("operator_address")
-@click.argument("network_address")
+@click.argument("operator_address", type=address_type)
+@click.argument("network_address", type=address_type)
 @click.pass_context
 def check_opt_in_network(ctx, operator_address, network_address):
-    """Check if operator is opted in to a network."""
+    """Check if operator is opted in to a network.
+
+    \b
+    OPERATOR_ADDRESS - an address of the operator to check an opt-in status of
+    NETWORK_ADDRESS - an address of the network to check an opt-in status for
+    """
     print(
         f"Operator = {operator_address} IS opted in to network = {network_address}"
         if ctx.obj.get_op_opted_in_net(operator_address, network_address)
