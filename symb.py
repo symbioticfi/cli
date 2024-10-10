@@ -7,7 +7,6 @@ from web3 import Web3
 from w3multicall.multicall import W3Multicall
 import ledgereth
 from eth_account import Account
-from time import time
 from datetime import datetime
 import re
 
@@ -165,15 +164,13 @@ class SymbioticCLI:
         return Web3.to_checksum_address(address)
 
     def get_token_meta(self, token):
+        token = self.normalize_address(token)
+
         if token in self._cache["token_meta"]:
             return self._cache["token_meta"][token]
         w3_multicall = W3Multicall(self.w3)
-        w3_multicall.add(
-            W3Multicall.Call(self.normalize_address(token), "symbol()(string)")
-        )
-        w3_multicall.add(
-            W3Multicall.Call(self.normalize_address(token), "decimals()(uint8)")
-        )
+        w3_multicall.add(W3Multicall.Call(token, "symbol()(string)"))
+        w3_multicall.add(W3Multicall.Call(token, "decimals()(uint8)"))
         res = w3_multicall.call()
         if not res[0] or not res[1]:
             meta = {"symbol": "Unknown", "decimals": 0}
@@ -183,21 +180,26 @@ class SymbioticCLI:
         return meta
 
     def get_middleware(self, net):
-        return (
-            self.contracts["middleware_service"]
-            .functions.middleware(self.normalize_address(net))
-            .call()
+        net = self.normalize_address(net)
+        return self.normalize_address(
+            (self.contracts["middleware_service"].functions.middleware(net).call())
+        )
+
+    def get_collateral(self, vault_address):
+        vault_address = self.normalize_address(vault_address)
+        return self.normalize_address(
+            self.get_data("vault", vault_address, "collateral")
         )
 
     def get_delegator(self, vault_address):
         vault_address = self.normalize_address(vault_address)
-        vault = self.w3.eth.contract(vault_address, abi=self.ABIS["vault"])
-        return self.normalize_address(vault.functions.delegator().call())
+        return self.normalize_address(
+            self.get_data("vault", vault_address, "delegator")
+        )
 
     def get_slasher(self, vault_address):
         vault_address = self.normalize_address(vault_address)
-        vault = self.w3.eth.contract(vault_address, abi=self.ABIS["vault"])
-        return self.normalize_address(vault.functions.slasher().call())
+        return self.normalize_address(self.get_data("vault", vault_address, "slasher"))
 
     def get_nets(self):
         total_entities = self.contracts["net_registry"].functions.totalEntities().call()
@@ -209,6 +211,7 @@ class SymbioticCLI:
                 )
             )
         nets = w3_multicall.call()
+        nets = [self.normalize_address(net) for net in nets]
         w3_multicall = W3Multicall(self.w3)
         for net in nets:
             w3_multicall.add(
@@ -219,6 +222,7 @@ class SymbioticCLI:
                 )
             )
         middlewares = w3_multicall.call()
+        middlewares = [self.normalize_address(middleware) for middleware in middlewares]
         return [
             {"net": net, "middleware": middleware}
             for net, middleware in zip(nets, middlewares)
@@ -233,9 +237,11 @@ class SymbioticCLI:
                     self.ADDRESSES["op_registry"], "entity(uint256)(address)", i
                 )
             )
-        return w3_multicall.call()
+        ops = w3_multicall.call()
+        return [self.normalize_address(op) for op in ops]
 
     def get_op_nets(self, operator):
+        operator = self.normalize_address(operator)
         nets = self.get_nets()
         w3_multicall = W3Multicall(self.w3)
         for net in nets:
@@ -250,6 +256,7 @@ class SymbioticCLI:
         return [net for net, opted_in in zip(nets, optins) if opted_in]
 
     def get_net_ops(self, net):
+        net = self.normalize_address(net)
         ops = self.get_ops()
         w3_multicall = W3Multicall(self.w3)
         for op in ops:
@@ -275,6 +282,7 @@ class SymbioticCLI:
                 )
             )
         vaults = w3_multicall.call()
+        vaults = [self.normalize_address(vault) for vault in vaults]
         w3_multicall = W3Multicall(self.w3)
         for vault in vaults:
             w3_multicall.add(W3Multicall.Call(vault, "collateral()(address)"))
@@ -286,9 +294,9 @@ class SymbioticCLI:
             results.append(
                 {
                     "vault": vault,
-                    "collateral": collaterals[3 * i],
-                    "delegator": collaterals[3 * i + 1],
-                    "slasher": collaterals[3 * i + 2],
+                    "collateral": self.normalize_address(collaterals[3 * i]),
+                    "delegator": self.normalize_address(collaterals[3 * i + 1]),
+                    "slasher": self.normalize_address(collaterals[3 * i + 2]),
                     "delegator_type": -1,
                     "slasher_type": -1,
                 }
@@ -316,6 +324,7 @@ class SymbioticCLI:
 
     def get_net_vaults(self, net):
         """Fetch all vaults in a given network."""
+        net = self.normalize_address(net)
         vaults = self.get_vaults()
         w3_multicall = W3Multicall(self.w3)
         for vault in vaults:
@@ -338,6 +347,7 @@ class SymbioticCLI:
 
     def get_net_ops_vaults(self, net):
         """Fetch the stakes of all operators in a given network."""
+        net = self.normalize_address(net)
         vaults = self.get_net_vaults(net)
         ops = self.get_net_ops(net)
 
@@ -366,6 +376,7 @@ class SymbioticCLI:
 
     def get_op_nets_vaults(self, op):
         """Fetch stakes of an operator in all networks."""
+        op = self.normalize_address(op)
         nets = self.get_op_nets(op)  # Fetch networks where the operator is opted in
 
         w3_multicall = W3Multicall(self.w3)
@@ -397,6 +408,7 @@ class SymbioticCLI:
 
     def get_vault_ops(self, vault):
         """Get all operators that are opted into a given vault."""
+        vault = self.normalize_address(vault)
         ops = self.get_ops()
         w3_multicall = W3Multicall(self.w3)
 
@@ -414,6 +426,7 @@ class SymbioticCLI:
 
     def get_vault_nets(self, vault):
         """Get all networks associated with a given vault."""
+        vault = self.normalize_address(vault)
         nets = self.get_nets()
         delegator = self.get_delegator(vault)
 
@@ -440,6 +453,7 @@ class SymbioticCLI:
 
     def get_vault_nets_ops(self, vault):
         """Get all operators opted into the vault and their associated networks."""
+        vault = self.normalize_address(vault)
         vault_ops = self.get_vault_ops(vault)
         vault_nets = self.get_vault_nets(vault)
 
@@ -462,6 +476,8 @@ class SymbioticCLI:
 
     def get_op_opted_in_vault(self, operator, vault):
         """Check if an operator is opted into a vault."""
+        operator = self.normalize_address(operator)
+        vault = self.normalize_address(vault)
         return (
             self.contracts["op_vault_opt_in"]
             .functions.isOptedIn(operator, vault)
@@ -470,27 +486,31 @@ class SymbioticCLI:
 
     def get_op_opted_in_net(self, operator, net):
         """Check if an operator is opted into a network."""
+        operator = self.normalize_address(operator)
+        net = self.normalize_address(net)
         return self.contracts["op_net_opt_in"].functions.isOptedIn(operator, net).call()
 
-    def get_resolver(self, slasher_address, subnetwork):
-        net = self.normalize_address(net)
-        return self.normalize_address(
-            self.get_data("veto_slasher", slasher_address, "resolver", subnetwork, "")
-        )
-
     def get_resolver_set_epoch_delay(self, slasher_address):
+        slasher_address = self.normalize_address(slasher_address)
         return self.get_data("veto_slasher", slasher_address, "resolverSetEpochsDelay")
 
+    def get_resolver(self, slasher_address, subnetwork):
+        slasher_address = self.normalize_address(slasher_address)
+        return self.normalize_address(
+            self.get_data("veto_slasher", slasher_address, "resolver", subnetwork, "0x")
+        )
+
     def get_pending_resolver(self, slasher_address, subnetwork):
-        timestmap = time() + 10 * 365 * 24 * 60 * 60  # 10 years in the future
+        slasher_address = self.normalize_address(slasher_address)
+        timestamp = 2**48 - 1
         return self.normalize_address(
             self.get_data(
                 "veto_slasher",
                 slasher_address,
                 "resolverAt",
                 subnetwork,
-                timestmap,
-                "",
+                timestamp,
+                "0x",
             )
         )
 
@@ -561,12 +581,12 @@ class SymbioticCLI:
         print(" " * indent + " ".join(map(str, args)))
 
     def get_data(self, entity, address, function_name, *args, **kwargs):
+        address = self.normalize_address(address)
         contract = self.w3.eth.contract(address=address, abi=self.ABIS[entity])
 
         return contract.functions[function_name](*args).call(kwargs)
 
     def get_address(self, private_key, ledger, ledger_address):
-
         if ledger_address:
             ledger_address = self.normalize_address(ledger_address)
 
@@ -582,6 +602,8 @@ class SymbioticCLI:
         return self.normalize_address(address)
 
     def get_transaction(self, who, entity, address, function_name, *args, **kwargs):
+        who = self.normalize_address(who)
+        address = self.normalize_address(address)
         contract = self.w3.eth.contract(address=address, abi=self.ABIS[entity])
 
         return contract.functions[function_name](*args).build_transaction(
@@ -591,6 +613,7 @@ class SymbioticCLI:
     def get_transaction_ledger(
         self, ledger_account, entity, address, function_name, *args, **kwargs
     ):
+        address = self.normalize_address(address)
         tx = self.get_transaction(
             ledger_account.address, entity, address, function_name, *args, **kwargs
         )
@@ -631,6 +654,7 @@ class SymbioticCLI:
         *args,
         success_message="Success!",
     ):
+        to = self.normalize_address(to)
         try:
             if ledger_address:
                 ledger_address = self.normalize_address(ledger_address)
@@ -709,7 +733,7 @@ def middleware(ctx, network_address):
     """Get network middleware address.
 
     \b
-    NETWORK_ADDRESS - an address of the vault to get a middleware for
+    NETWORK_ADDRESS - an address of the network to get a middleware for
     """
     network_address = ctx.obj.normalize_address(network_address)
     middleware_address = ctx.obj.get_middleware(network_address)
@@ -751,7 +775,7 @@ def netstakes(ctx, network_address):
     """Show stakes of all operators in network.
 
     \b
-    NETWORK_ADDRESS - an address of the network to get a whole stake for
+    NETWORK_ADDRESS - an address of the network to get a whole stake data for
     """
     network_address = ctx.obj.normalize_address(network_address)
     print(f"Network: {network_address}")
@@ -815,7 +839,11 @@ def netstakes(ctx, network_address):
 @click.argument("address", type=address_type)
 @click.pass_context
 def isop(ctx, address):
-    """Check if address is operator."""
+    """Check if address is operator.
+
+    \b
+    ADDRESS - an address to check
+    """
     address = ctx.obj.normalize_address(address)
     is_op = ctx.obj.contracts["op_registry"].functions.isEntity(address).call()
     print(is_op)
@@ -840,7 +868,6 @@ def op_vault_net_stake(ctx, operator_address, vault_address, network_address):
     """Get operator stake in vault for network.
 
     \b
-    \b
     OPERATOR_ADDRESS - an address of the operator to get a stake of
     VAULT_ADDRESS - an address of the vault to get a stake at
     NETWORK_ADDRESS - an address of the network to get a stake for
@@ -855,6 +882,10 @@ def op_vault_net_stake(ctx, operator_address, vault_address, network_address):
     subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
 
     stake = ctx.obj.get_stake(vault_address, subnetwork, operator_address)
+    collateral = ctx.obj.get_collateral(vault_address)
+    token_meta = ctx.obj.get_token_meta(collateral)
+    stake_normalized = stake / 10 ** token_meta["decimals"]
+    collateral_symbol = token_meta["symbol"]
 
     if delegator_type == 0:
         operator_network_shares = ctx.obj.get_operator_network_shares(
@@ -866,11 +897,11 @@ def op_vault_net_stake(ctx, operator_address, vault_address, network_address):
         percent = operator_network_shares / total_operator_network_shares * 100
 
         print(
-            f"Operator stake in vault = {vault_address} for subnetwork = {subnetwork} is {stake} which is {percent}% ({operator_network_shares} / {total_operator_network_shares} in shares) of network stake"
+            f"Operator stake\nin vault = {vault_address}\nfor subnetwork = {subnetwork}\nis {stake_normalized} {collateral_symbol}\nwhich is {percent}% ({operator_network_shares} / {total_operator_network_shares} in shares) of network stake"
         )
     else:
         print(
-            f"Operator stake in vault = {vault_address} for subnetwork = {subnetwork} is {stake}"
+            f"Operator stake in vault = {vault_address}\nfor subnetwork = {subnetwork}\nis {stake}"
         )
 
 
@@ -898,7 +929,7 @@ def opstakes(ctx, operator_address):
     """Show operator stakes in all networks.
 
     \b
-    OPERATOR_ADDRESS - an address of the operator to get a whole stake for
+    OPERATOR_ADDRESS - an address of the operator to get a whole stake data for
     """
     operator_address = ctx.obj.normalize_address(operator_address)
     print(f"Operator: {operator_address}")
@@ -955,6 +986,20 @@ def opstakes(ctx, operator_address):
 
 
 ## GENERAL VAULT RELATED CLI COMMANDS ##
+
+
+@cli.command()
+@click.argument("address", type=address_type)
+@click.pass_context
+def isvault(ctx, address):
+    """Check if address is vault.
+
+    \b
+    ADDRESS - an address to check
+    """
+    address = ctx.obj.normalize_address(address)
+    is_vault = ctx.obj.contracts["vault_factory"].functions.isEntity(address).call()
+    print(is_vault)
 
 
 @cli.command()
@@ -1129,7 +1174,8 @@ def set_max_network_limit(
 @cli.command()
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
-def resovler(ctx, vault_address, network_address):
+@click.pass_context
+def resolver(ctx, vault_address, network_address):
     """Get a current resolver for a subnetwork in a vault.
 
     \b
@@ -1157,7 +1203,8 @@ def resovler(ctx, vault_address, network_address):
 @cli.command()
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
-def pending_resovler(ctx, vault_address, network_address):
+@click.pass_context
+def pending_resolver(ctx, vault_address, network_address):
     """Get a pending resolver for a subnetwork in a vault.
 
     \b
@@ -1223,12 +1270,13 @@ def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_addre
         print("It is not a VetoSlasher.")
         return
 
-    identifier = 0  # TODO: fix subnets
-
     net = ctx.obj.get_address(private_key, ledger, ledger_address)
 
-    current_resolver = ctx.obj.get_resolver(slasher, bytes.fromhex(net[2:]))
-    pending_resolver = ctx.obj.get_pending_resolver(slasher, bytes.fromhex(net[2:]))
+    identifier = 0
+    subnetwork = net + (64 - 40) * "0"  # TODO: fix subnets
+
+    current_resolver = ctx.obj.get_resolver(slasher, subnetwork)
+    pending_resolver = ctx.obj.get_pending_resolver(slasher, subnetwork)
     new_timestamp = ctx.obj.get_vault_current_epoch_start(
         vault_address
     ) + ctx.obj.get_resolver_set_epoch_delay(
@@ -1236,14 +1284,12 @@ def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_addre
     ) * ctx.obj.get_vault_epoch_duration(
         vault_address
     )
-    new_datetime = datetime.datetime.fromtimestamp(new_timestamp).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
+    new_datetime = datetime.fromtimestamp(new_timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
     if current_resolver != pending_resolver:
         if not ctx.obj.process_request(
             f"""You have a pending set resolver request for {pending_resolver}.
-Are you sure you want to remove the existing request, and create a new one with a new set timestamp = {new_datetime}? (y/n)
+Are you sure you want to remove the existing request and create a new one with a new set timestamp = {new_datetime}? (y/n)
 """
         ):
             return
@@ -1257,8 +1303,8 @@ Are you sure you want to remove the existing request, and create a new one with 
         "setResolver",
         identifier,
         resolver,
-        "",
-        success_message=f"Successfully set resolver = {resolver} for subnetwork = {bytes.fromhex(net[2:])} at vault = {vault_address}",
+        "0x",
+        success_message=f"Successfully set resolver = {resolver} for subnetwork = {subnetwork} at vault = {vault_address}",
     )
 
 
@@ -1440,7 +1486,7 @@ def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
     """Opt-out from a network.
 
     \b
-    NETWORK_ADDRESS - an address of the network to opt out
+    NETWORK_ADDRESS - an address of the network to opt out from
     """
     network_address = ctx.obj.normalize_address(network_address)
 
@@ -1526,7 +1572,7 @@ def set_network_limit(
         "setNetworkLimit",
         subnetwork,
         limit,
-        success_message=f"Successfully set limit = {limit} for network = {network_address}",
+        success_message=f"Successfully set limit = {limit} for subnetwork = {subnetwork}",
     )
 
 
@@ -1590,7 +1636,7 @@ def set_operator_network_limit(
         subnetwork,
         operator_address,
         limit,
-        success_message=f"Successfully set limit = {limit} for operator = {operator_address} in network = {network_address}",
+        success_message=f"Successfully set limit = {limit} for operator = {operator_address} in subnetwork = {subnetwork}",
     )
 
 
@@ -1629,7 +1675,7 @@ def set_operator_network_shares(
     VAULT_ADDRESS - an address of the vault to adjust the delegations for
     NETWORK_ADDRESS - an address of the network
     OPERATOR_ADDRESS - an address of the operator to set shares in the network for
-    SHARES - an amount of shares (determine a percent = operator shares / total shares of the network stake the operator can get) to set for the operator
+    SHARES - an amount of shares (determines a percent = operator shares / total shares of the network stake the operator can get) to set for the operator
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
@@ -1670,7 +1716,7 @@ def set_operator_network_shares(
         subnetwork,
         operator_address,
         shares,
-        success_message=f"Successfully set shares = {shares} for operator = {operator_address} in network = {network_address}",
+        success_message=f"Successfully set shares = {shares} for operator = {operator_address} in subnetwork = {subnetwork}",
     )
 
 

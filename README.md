@@ -41,6 +41,7 @@ Commands:
 
   --- for general use (related to Vaults) ---
 
+  isvault                      Check if address is vault.
   vaults                       List all vaults.
   vaultnets                    List all networks associated with the given vault.
   vaultops                     List all operators opted into the given vault.
@@ -49,9 +50,9 @@ Commands:
   --- for Networks ---
 
   register-network             Register the signer as a network.
-  pending-resovler             Get a current resolver for a subnetwork in a vault.
-  resovler                     Get a pending resolver for a subnetwork in a vault.
   set-max-network-limit        Set a maximum network limit at the vault's delegator.
+  pending-resolver             Get a current resolver for a subnetwork in a vault.
+  resolver                     Get a pending resolver for a subnetwork in a vault.
   set-resolver                 Set a resolver for a subnetwork at VetoSlasher.
 
   --- for Operators ---
