@@ -30,6 +30,8 @@ Commands:
   nets                         List all networks.
   netops                       List all operators opted in network.
   netstakes                    Show stakes of all operators in network.
+  pending-resolver             Get a current resolver for a subnetwork in a vault.
+  resolver                     Get a pending resolver for a subnetwork in a vault.
 
   --- for general use (related to Operators) ---
 
@@ -38,6 +40,8 @@ Commands:
   opnets                       List all networks where operator is opted in.
   op-vault-net-stake           Get operator stake in vault for network (includes data about the operator's shares if NetworkRestakeDelegator).
   opstakes                     Show operator stakes in all networks.
+  check-opt-in-network         Check if operator is opted in to a network.
+  check-opt-in-vault           Check if is opted in to a vault.
 
   --- for general use (related to Vaults) ---
 
@@ -51,15 +55,11 @@ Commands:
 
   register-network             Register the signer as a network.
   set-max-network-limit        Set a maximum network limit at the vault's delegator.
-  pending-resolver             Get a current resolver for a subnetwork in a vault.
-  resolver                     Get a pending resolver for a subnetwork in a vault.
   set-resolver                 Set a resolver for a subnetwork at VetoSlasher.
 
   --- for Operators ---
 
   register-operator            Register the signer as an operator.
-  check-opt-in-network         Check if operator is opted in to a network.
-  check-opt-in-vault           Check if is opted in to a vault.
   opt-in-network               Opt-in to a network.
   opt-in-vault                 Opt-in to a vault.
   opt-out-network              Opt-out from a network.
