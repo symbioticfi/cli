@@ -1064,6 +1064,42 @@ def opstakes(ctx, operator_address):
         )
 
 
+@cli.command()
+@click.argument("operator_address", type=address_type)
+@click.argument("vault_address", type=address_type)
+@click.pass_context
+def check_opt_in_vault(ctx, operator_address, vault_address):
+    """Check if operator is opted in to a vault.
+
+    \b
+    OPERATOR_ADDRESS - an address of the operator to check an opt-in status of
+    VAULT_ADDRESS - an address of the vault to check an opt-in status for
+    """
+    print(
+        f"Operator = {operator_address} IS opted in to vault = {vault_address}"
+        if ctx.obj.get_op_opted_in_vault(operator_address, vault_address)
+        else f"Operator = {operator_address} IS NOT opted in to vault = {vault_address}"
+    )
+
+
+@cli.command()
+@click.argument("operator_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.pass_context
+def check_opt_in_network(ctx, operator_address, network_address):
+    """Check if operator is opted in to a network.
+
+    \b
+    OPERATOR_ADDRESS - an address of the operator to check an opt-in status of
+    NETWORK_ADDRESS - an address of the network to check an opt-in status for
+    """
+    print(
+        f"Operator = {operator_address} IS opted in to network = {network_address}"
+        if ctx.obj.get_op_opted_in_net(operator_address, network_address)
+        else f"Operator = {operator_address} IS NOT opted in to network = {network_address}"
+    )
+
+
 ## GENERAL VAULT RELATED CLI COMMANDS ##
 
 
@@ -1492,24 +1528,6 @@ def opt_out_vault(ctx, vault_address, private_key, ledger, ledger_address):
 
 
 @cli.command()
-@click.argument("operator_address", type=address_type)
-@click.argument("vault_address", type=address_type)
-@click.pass_context
-def check_opt_in_vault(ctx, operator_address, vault_address):
-    """Check if is opted in to a vault.
-
-    \b
-    OPERATOR_ADDRESS - an address of the operator to check an opt-in status of
-    VAULT_ADDRESS - an address of the vault to check an opt-in status for
-    """
-    print(
-        f"Operator = {operator_address} IS opted in to vault = {vault_address}"
-        if ctx.obj.get_op_opted_in_vault(operator_address, vault_address)
-        else f"Operator = {operator_address} IS NOT opted in to vault = {vault_address}"
-    )
-
-
-@cli.command()
 @click.argument("network_address", type=address_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
@@ -1578,24 +1596,6 @@ def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
         "optOut",
         network_address,
         success_message=f"Successfully opted out from network = {network_address}",
-    )
-
-
-@cli.command()
-@click.argument("operator_address", type=address_type)
-@click.argument("network_address", type=address_type)
-@click.pass_context
-def check_opt_in_network(ctx, operator_address, network_address):
-    """Check if operator is opted in to a network.
-
-    \b
-    OPERATOR_ADDRESS - an address of the operator to check an opt-in status of
-    NETWORK_ADDRESS - an address of the network to check an opt-in status for
-    """
-    print(
-        f"Operator = {operator_address} IS opted in to network = {network_address}"
-        if ctx.obj.get_op_opted_in_net(operator_address, network_address)
-        else f"Operator = {operator_address} IS NOT opted in to network = {network_address}"
     )
 
 
