@@ -6,8 +6,11 @@ import click
 from web3 import Web3
 from w3multicall.multicall import W3Multicall
 import ledgereth
+from ledgereth.messages import sign_typed_data_draft
 from eth_account import Account
+from eth_account.messages import encode_typed_data
 from datetime import datetime
+from time import time
 import re
 
 
@@ -577,6 +580,118 @@ class SymbioticCLI:
             "delegator", delegator_address, "stake", subnetwork, operator_address
         )
 
+    def get_operator_network_opt_in_signature(
+        self, private_key, ledger, ledger_address, where, duration
+    ):
+        where = self.normalize_address(where)
+        nonce = 1
+        return self.process_type_data_sign(
+            private_key,
+            ledger,
+            ledger_address,
+            "OperatorNetworkOptInService",
+            "1",
+            self.ADDRESSES["op_net_opt_in"],
+            {
+                "OptIn": [
+                    {"name": "who", "type": "address"},
+                    {"name": "where", "type": "address"},
+                    {"name": "nonce", "type": "uint256"},
+                    {"name": "deadline", "type": "uint48"},
+                ],
+            },
+            {
+                "who": self.get_address(private_key, ledger, ledger_address),
+                "where": where,
+                "nonce": nonce,
+                "deadline": int(time()) + duration,
+            },
+        )
+
+    def get_operator_network_opt_out_signature(
+        self, private_key, ledger, ledger_address, where, duration
+    ):
+        where = self.normalize_address(where)
+        nonce = 1
+        return self.process_type_data_sign(
+            private_key,
+            ledger,
+            ledger_address,
+            "OperatorNetworkOptInService",
+            "1",
+            self.ADDRESSES["op_net_opt_in"],
+            {
+                "OptOut": [
+                    {"name": "who", "type": "address"},
+                    {"name": "where", "type": "address"},
+                    {"name": "nonce", "type": "uint256"},
+                    {"name": "deadline", "type": "uint48"},
+                ],
+            },
+            {
+                "who": self.get_address(private_key, ledger, ledger_address),
+                "where": where,
+                "nonce": nonce,
+                "deadline": int(time()) + duration,
+            },
+        )
+
+    def get_operator_vault_opt_in_signature(
+        self, private_key, ledger, ledger_address, where, duration
+    ):
+        where = self.normalize_address(where)
+        nonce = 1
+        return self.process_type_data_sign(
+            private_key,
+            ledger,
+            ledger_address,
+            "OperatorVaultOptInService",
+            "1",
+            self.ADDRESSES["op_net_opt_in"],
+            {
+                "OptIn": [
+                    {"name": "who", "type": "address"},
+                    {"name": "where", "type": "address"},
+                    {"name": "nonce", "type": "uint256"},
+                    {"name": "deadline", "type": "uint48"},
+                ],
+            },
+            {
+                "who": self.get_address(private_key, ledger, ledger_address),
+                "where": where,
+                "nonce": nonce,
+                "deadline": int(time()) + duration,
+            },
+        )
+
+    def get_operator_vault_opt_out_signature(
+        self, private_key, ledger, ledger_address, where, duration
+    ):
+        where = self.normalize_address(where)
+        nonce = 1
+        return self.process_type_data_sign(
+            private_key,
+            ledger,
+            ledger_address,
+            "OperatorVaultOptInService",
+            "1",
+            self.ADDRESSES["op_net_opt_in"],
+            {
+                "OptOut": [
+                    {"name": "who", "type": "address"},
+                    {"name": "where", "type": "address"},
+                    {"name": "nonce", "type": "uint256"},
+                    {"name": "deadline", "type": "uint48"},
+                ],
+            },
+            {
+                "who": self.get_address(private_key, ledger, ledger_address),
+                "where": where,
+                "nonce": nonce,
+                "deadline": int(time()) + duration,
+            },
+        )
+
     def print_indented(self, *args, indent=2):
         print(" " * indent + " ".join(map(str, args)))
 
@@ -681,6 +796,98 @@ class SymbioticCLI:
             print(success_message)
 
             return tx_receipt
+
+        except Exception as e:
+            print(f"Failed! Reason: {e}")
+
+    def get_domain_data(self, name, version, verifyingContract):
+        verifyingContract = self.normalize_address(verifyingContract)
+        return {
+            "name": name,
+            "version": version,
+            "chainId": 17000,
+            "verifyingContract": str(verifyingContract),
+        }
+
+    def get_signable_message_from_typed_data(
+        self, name, version, verifyingContract, message_types, message_data
+    ):
+        verifyingContract = self.normalize_address(verifyingContract)
+        return encode_typed_data(
+            self.get_domain_data(name, version, verifyingContract),
+            message_types,
+            message_data,
+        )
+
+    def sign_typed_data_ledger(self, account, signable_message):
+        domain_hash = signable_message.header
+        message_hash = signable_message.body
+
+        print("Sign data on Ledger device")
+
+        return sign_typed_data_draft(
+            domain_hash, message_hash, sender_path=account.path
+        )
+
+    def sign_typed_data(
+        self, private_key, name, version, verifyingContract, message_types, message_data
+    ):
+        verifyingContract = self.normalize_address(verifyingContract)
+        return Account.sign_typed_data(
+            private_key,
+            self.get_domain_data(name, version, verifyingContract),
+            message_types,
+            message_data,
+        )
+
+    def process_type_data_sign(
+        self,
+        private_key,
+        ledger,
+        ledger_address,
+        name,
+        version,
+        verifyingContract,
+        message_types,
+        message_data,
+        success_message="Success! Your signature is: {}",
+    ):
+        verifyingContract = self.normalize_address(verifyingContract)
+        try:
+            if ledger_address:
+                ledger_address = self.normalize_address(ledger_address)
+
+            if ledger:
+                if ledger_address:
+                    account = ledgereth.accounts.find_account(ledger_address)
+                else:
+                    account = ledgereth.accounts.get_accounts()[0]
+
+                signable_message = self.get_signable_message_from_typed_data(
+                    name,
+                    version,
+                    verifyingContract,
+                    message_types,
+                    message_data,
+                )
+
+                signed_message = self.sign_typed_data_ledger(account, signable_message)
+                signature = signed_message.signature
+
+            else:
+                signed_message = self.sign_typed_data(
+                    private_key,
+                    name,
+                    version,
+                    verifyingContract,
+                    message_types,
+                    message_data,
+                )
+                signature = signed_message.signature.hex()
+
+            print(success_message.format(signature))
+
+            return signature
 
         except Exception as e:
             print(f"Failed! Reason: {e}")
@@ -1378,6 +1585,43 @@ def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
 
 @cli.command()
 @click.argument("vault_address", type=address_type)
+@click.argument("duration", default=7 * 24 * 60 * 60, type=uint48_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def opt_in_vault_signature(
+    ctx, vault_address, duration, private_key, ledger, ledger_address
+):
+    """Get a signature for opt-in to a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to opt into
+    DURATION - a period of time (in seconds) after which the signature will expire (default is 7 days)
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+
+    ctx.obj.get_operator_vault_opt_in_signature(
+        private_key,
+        ledger,
+        ledger_address,
+        vault_address,
+        duration,
+    )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -1409,6 +1653,43 @@ def opt_out_vault(ctx, vault_address, private_key, ledger, ledger_address):
         "optOut",
         vault_address,
         success_message=f"Successfully opted out from vault = {vault_address}",
+    )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("duration", default=7 * 24 * 60 * 60, type=uint48_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def opt_out_vault_signature(
+    ctx, vault_address, duration, private_key, ledger, ledger_address
+):
+    """Get a signature for opt-out from a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to opt out from
+    DURATION - a period of time (in seconds) after which the signature will expire (default is 7 days)
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+
+    ctx.obj.get_operator_vault_opt_in_signature(
+        private_key,
+        ledger,
+        ledger_address,
+        vault_address,
+        duration,
     )
 
 
@@ -1468,6 +1749,43 @@ def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
 
 @cli.command()
 @click.argument("network_address", type=address_type)
+@click.argument("duration", default=7 * 24 * 60 * 60, type=uint48_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def opt_in_network_signature(
+    ctx, network_address, duration, private_key, ledger, ledger_address
+):
+    """Get a signature for opt-in to a network.
+
+    \b
+    NETWORK_ADDRESS - an address of the network to opt into
+    DURATION - a period of time (in seconds) after which the signature will expire (default is 7 days)
+    """
+    network_address = ctx.obj.normalize_address(network_address)
+
+    ctx.obj.get_operator_network_opt_in_signature(
+        private_key,
+        ledger,
+        ledger_address,
+        network_address,
+        duration,
+    )
+
+
+@cli.command()
+@click.argument("network_address", type=address_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -1499,6 +1817,43 @@ def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
         "optOut",
         network_address,
         success_message=f"Successfully opted out from network = {network_address}",
+    )
+
+
+@cli.command()
+@click.argument("network_address", type=address_type)
+@click.argument("duration", default=7 * 24 * 60 * 60, type=uint48_type)
+@click.option(
+    "--private-key", type=bytes32_type, help="Your private key for signing transactions"
+)
+@click.option(
+    "--ledger",
+    is_flag=True,
+    help="Use a Ledger device for signing transactions instead of a private key",
+)
+@click.option(
+    "--ledger-address",
+    type=address_type,
+    help="The Ledger account address to use for signing (defaults to the first account if not provided)",
+)
+@click.pass_context
+def opt_out_network_signature(
+    ctx, network_address, duration, private_key, ledger, ledger_address
+):
+    """Get a signature for opt-out from a network.
+
+    \b
+    NETWORK_ADDRESS - an address of the network to opt out from
+    DURATION - a period of time (in seconds) after which the signature will expire (default is 7 days)
+    """
+    network_address = ctx.obj.normalize_address(network_address)
+
+    ctx.obj.get_operator_network_opt_in_signature(
+        private_key,
+        ledger,
+        ledger_address,
+        network_address,
+        duration,
     )
 
 
@@ -1559,7 +1914,7 @@ def set_network_limit(
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
 
-    if delegator_type not in [0, 1]:
+    if delegator_type not in [0, 1, 2]:
         print("Delegator doesn't have such functionality.")
         return
 
