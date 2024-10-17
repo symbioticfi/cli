@@ -98,14 +98,51 @@ class Uint48Type(click.ParamType):
             self.fail(f"{value} is not a valid integer", param, ctx)
 
 
+class ChainType(click.ParamType):
+    name = "chain"
+
+    CHAIN_IDS = {
+        "holesky": "holesky",
+        "17000": "holesky",
+        "sepolia": "sepolia",
+        "11155111": "sepolia",
+        # 'mainnet': 'mainnet',
+        # '1': 'mainnet',
+    }
+
+    def convert(self, value, param, ctx):
+        value_str = str(value).lower()
+        if value_str in self.CHAIN_IDS:
+            return self.CHAIN_IDS[value_str]
+        else:
+            self.fail(
+                f'Invalid chain: {value}. Valid options are: {", ".join(self.CHAIN_IDS.keys())}',
+                param,
+                ctx,
+            )
+
+
 address_type = AddressType()
 bytes32_type = Bytes32Type()
 uint256_type = Uint256Type()
 uint96_type = Uint96Type()
 uint48_type = Uint48Type()
+chain_type = ChainType()
 
 
 class SymbioticCLI:
+
+    CHAIN_IDS = {
+        "holesky": 17000,
+        "sepolia": 11155111,
+        "mainnet": 1,
+    }
+
+    PROVIDERS = {
+        "holesky": "https://ethereum-holesky-rpc.publicnode.com",
+        "sepolia": "https://ethereum-sepolia-rpc.publicnode.com",
+        "mainnet": "https://ethereum-rpc.publicnode.com",
+    }
 
     ABIS = {
         "op_registry": '[{"inputs":[],"name":"EntityNotExist","type":"error"},{"inputs":[],"name":"OperatorAlreadyRegistered","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"entity","type":"address"}],"name":"AddEntity","type":"event"},{"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"entity","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"entity_","type":"address"}],"name":"isEntity","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"registerOperator","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"totalEntities","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]',
@@ -123,12 +160,30 @@ class SymbioticCLI:
     }
 
     ADDRESSES = {
-        "op_registry": "0xa02C55a6306c859517A064fb34d48DFB773A4a52",
-        "net_registry": "0x5dEA088d2Be1473d948895cc26104bcf103CEf3E",
-        "op_vault_opt_in": "0x63E459f3E2d8F7f5E4AdBA55DE6c50CbB43dD563",
-        "op_net_opt_in": "0x973ba45986FF71742129d23C4138bb3fAd4f13A5",
-        "middleware_service": "0x70818a53ddE5c2e78Edfb6f6b277Be9a71fa894E",
-        "vault_factory": "0x5035c15F3cb4364CF2cF35ca53E3d6FC45FC8899",
+        "holesky": {
+            "op_registry": "0xa02C55a6306c859517A064fb34d48DFB773A4a52",
+            "net_registry": "0x5dEA088d2Be1473d948895cc26104bcf103CEf3E",
+            "op_vault_opt_in": "0x63E459f3E2d8F7f5E4AdBA55DE6c50CbB43dD563",
+            "op_net_opt_in": "0x973ba45986FF71742129d23C4138bb3fAd4f13A5",
+            "middleware_service": "0x70818a53ddE5c2e78Edfb6f6b277Be9a71fa894E",
+            "vault_factory": "0x5035c15F3cb4364CF2cF35ca53E3d6FC45FC8899",
+        },
+        "sepolia": {
+            "op_registry": "0xAc5Fe73E2829EeF6B408f349E936f9a817e6850D",
+            "net_registry": "0x6fEe87ff83799EB1eB5314B10296C4920C39803f",
+            "op_vault_opt_in": "0x03F9EcA88e1fbfca0Beb0E5Ad8d139Af218D09F5",
+            "op_net_opt_in": "0x470922527801b1bE917fD482778d0801877FD7b7",
+            "middleware_service": "0x1493b5D471a371998653d560dA89168723006C11",
+            "vault_factory": "0x90D6BF17d26D975611f20A8e2f15dF8eb957526D",
+        },
+        "mainnet": {
+            "op_registry": "0x0000000000000000000000000000000000000000",
+            "net_registry": "0x0000000000000000000000000000000000000000",
+            "op_vault_opt_in": "0x0000000000000000000000000000000000000000",
+            "op_net_opt_in": "0x0000000000000000000000000000000000000000",
+            "middleware_service": "0x0000000000000000000000000000000000000000",
+            "vault_factory": "0x0000000000000000000000000000000000000000",
+        },
     }
 
     DELEGATOR_TYPES_ENTITIES = {
@@ -147,15 +202,28 @@ class SymbioticCLI:
         1: "VetoSlasher",
     }
 
-    def __init__(self, provider):
-        self.provider = provider
-        self.w3 = Web3(Web3.HTTPProvider(provider))
+    def __init__(self, chain, provider):
+        self.chain = chain
+        self.provider = provider if provider else self.PROVIDERS[self.chain]
+        self.w3 = Web3(Web3.HTTPProvider(self.provider))
+
+        if self.w3.eth.chain_id != self.CHAIN_IDS[self.chain]:
+            raise ValueError(
+                f"Mismatch between specified chain ID ({self.CHAIN_IDS[self.chain]}) and provider's chain ID ({self.w3.eth.chain_id})"
+            )
+
+        self.addresses = {
+            key: self.normalize_address(address)
+            for key, address in self.ADDRESSES[self.chain].items()
+        }
         self.contracts = {}
         self._cache = {"token_meta": {}}
         self.init_contracts()
 
+        print(f"Connected to chain ID {self.w3.eth.chain_id}")
+
     def init_contracts(self):
-        for name, address in self.ADDRESSES.items():
+        for name, address in self.addresses.items():
             self.contracts[name] = self.w3.eth.contract(
                 address=address, abi=self.ABIS[name]
             )
@@ -207,7 +275,7 @@ class SymbioticCLI:
         for i in range(total_entities):
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["net_registry"], "entity(uint256)(address)", i
+                    self.addresses["net_registry"], "entity(uint256)(address)", i
                 )
             )
         nets = w3_multicall.call()
@@ -216,7 +284,7 @@ class SymbioticCLI:
         for net in nets:
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["middleware_service"],
+                    self.addresses["middleware_service"],
                     "middleware(address)(address)",
                     net,
                 )
@@ -234,7 +302,7 @@ class SymbioticCLI:
         for i in range(total_entities):
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["op_registry"], "entity(uint256)(address)", i
+                    self.addresses["op_registry"], "entity(uint256)(address)", i
                 )
             )
         ops = w3_multicall.call()
@@ -247,7 +315,7 @@ class SymbioticCLI:
         for net in nets:
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["op_net_opt_in"],
+                    self.addresses["op_net_opt_in"],
                     "isOptedIn(address,address)(bool)",
                     [operator, net["net"]],
                 )
@@ -262,7 +330,7 @@ class SymbioticCLI:
         for op in ops:
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["op_net_opt_in"],
+                    self.addresses["op_net_opt_in"],
                     "isOptedIn(address,address)(bool)",
                     [op, net],
                 )
@@ -278,7 +346,7 @@ class SymbioticCLI:
         for i in range(total_entities):
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["vault_factory"], "entity(uint256)(address)", i
+                    self.addresses["vault_factory"], "entity(uint256)(address)", i
                 )
             )
         vaults = w3_multicall.call()
@@ -415,7 +483,7 @@ class SymbioticCLI:
         for op in ops:
             w3_multicall.add(
                 W3Multicall.Call(
-                    self.ADDRESSES["op_vault_opt_in"],
+                    self.addresses["op_vault_opt_in"],
                     "isOptedIn(address,address)(bool)",
                     [op, vault],
                 )
@@ -463,7 +531,7 @@ class SymbioticCLI:
             for op in vault_ops:
                 w3_multicall.add(
                     W3Multicall.Call(
-                        self.ADDRESSES["op_net_opt_in"],
+                        self.addresses["op_net_opt_in"],
                         "isOptedIn(address,address)(bool)",
                         [op, net["net"]],
                     )
@@ -607,7 +675,12 @@ class SymbioticCLI:
         contract = self.w3.eth.contract(address=address, abi=self.ABIS[entity])
 
         return contract.functions[function_name](*args).build_transaction(
-            {"from": who, "nonce": self.w3.eth.get_transaction_count(who), **kwargs}
+            {
+                "chainId": self.CHAIN_IDS[self.chain],
+                "from": who,
+                "nonce": self.w3.eth.get_transaction_count(who),
+                **kwargs,
+            }
         )
 
     def get_transaction_ledger(
@@ -700,13 +773,19 @@ class SymbioticCLI:
 
 @click.group()
 @click.option(
+    "--chain",
+    default="holesky",
+    type=chain_type,
+    show_default=True,
+    help="Chain ID to use.",
+)
+@click.option(
     "--provider",
-    default="https://ethereum-holesky-rpc.publicnode.com",
-    help="Ethereum provider URL [http(s)]",
+    help="Ethereum provider URL [http(s)].",
 )
 @click.pass_context
-def cli(ctx, provider):
-    ctx.obj = SymbioticCLI(provider)
+def cli(ctx, chain, provider):
+    ctx.obj = SymbioticCLI(chain, provider)
 
 
 ## GENERAL NETWORK RELATED CLI COMMANDS ##
@@ -1122,7 +1201,7 @@ def register_network(ctx, private_key, ledger, ledger_address):
         ledger,
         ledger_address,
         "net_registry",
-        ctx.obj.ADDRESSES["net_registry"],
+        ctx.obj.addresses["net_registry"],
         "registerNetwork",
         success_message=f"Successfully registered as a network",
     )
@@ -1334,7 +1413,7 @@ def register_operator(ctx, private_key, ledger, ledger_address):
         ledger,
         ledger_address,
         "op_registry",
-        ctx.obj.ADDRESSES["op_registry"],
+        ctx.obj.addresses["op_registry"],
         "registerOperator",
         success_message=f"Successfully registered as an operator",
     )
@@ -1369,7 +1448,7 @@ def opt_in_vault(ctx, vault_address, private_key, ledger, ledger_address):
         ledger,
         ledger_address,
         "op_vault_opt_in",
-        ctx.obj.ADDRESSES["op_vault_opt_in"],
+        ctx.obj.addresses["op_vault_opt_in"],
         "optIn",
         vault_address,
         success_message=f"Successfully opted in to vault = {vault_address}",
@@ -1405,7 +1484,7 @@ def opt_out_vault(ctx, vault_address, private_key, ledger, ledger_address):
         ledger,
         ledger_address,
         "op_vault_opt_in",
-        ctx.obj.ADDRESSES["op_vault_opt_in"],
+        ctx.obj.addresses["op_vault_opt_in"],
         "optOut",
         vault_address,
         success_message=f"Successfully opted out from vault = {vault_address}",
@@ -1459,7 +1538,7 @@ def opt_in_network(ctx, network_address, private_key, ledger, ledger_address):
         ledger,
         ledger_address,
         "op_net_opt_in",
-        ctx.obj.ADDRESSES["op_net_opt_in"],
+        ctx.obj.addresses["op_net_opt_in"],
         "optIn",
         network_address,
         success_message=f"Successfully opted in to network = {network_address}",
@@ -1495,7 +1574,7 @@ def opt_out_network(ctx, network_address, private_key, ledger, ledger_address):
         ledger,
         ledger_address,
         "op_net_opt_in",
-        ctx.obj.ADDRESSES["op_net_opt_in"],
+        ctx.obj.addresses["op_net_opt_in"],
         "optOut",
         network_address,
         success_message=f"Successfully opted out from network = {network_address}",
