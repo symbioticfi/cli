@@ -2,7 +2,7 @@
 
 Simple CLI tool for fetching data from symbiotic core smart contracts.
 
-## Guide
+## Documentation
 
 Can be found [here](https://docs.symbiotic.fi/guides/cli).
 
