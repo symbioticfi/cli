@@ -1,6 +1,10 @@
 # Symbiotic CLI (symb)
 
-Simple CLI tool for fetching data from symbiotic core smart contracts.
+Simple CLI tool for fetching data and interacting with Symbiotic core smart contracts.
+
+## Documentation
+
+Can be found [here](https://docs.symbiotic.fi/guides/cli).
 
 ## Install
 
@@ -12,15 +16,12 @@ pip3 install -r requirements.txt
 
 ```
 $ python3 symb.py
-Usage: symb.py [OPTIONS] COMMAND [ARGS]...
+Usage: symb.py [GENERAL_OPTIONS] COMMAND [ARGS] [OPTIONS]
 
-Options:
-  --provider        TEXT  Ethereum provider URL [http(s)]
-  --help                  Show this message and exit.
-  --private-key     TEXT  Private key to sign transactions with (only for write functionality).
-  --ledger                Flag if to use a ledger to sign transactions (only for write functionality). Make sure to install Ledger Live, open the Ethereum app, and enable the blind signing first.
-  --ledger-address  TEXT  Address of the ledger's account to use to sign transactions (only for write functionality).
-
+General options:
+  --help                       Show all the possible commands and exit.
+  --chain                TEXT  Chain ID to use.
+  --provider             TEXT  Ethereum provider URL [http(s)].
 
 Commands:
   --- for general use (related to Networks) ---
@@ -67,9 +68,13 @@ Commands:
 
   register-operator            Register the signer as an operator.
   opt-in-network               Opt-in to a network.
+  opt-in-network-signature     Get a signature for opt-in to a network.
   opt-in-vault                 Opt-in to a vault.
+  opt-in-vault-signature       Get a signature for opt-in to a vault.
   opt-out-network              Opt-out from a network.
+  opt-out-network-signature    Get a signature for opt-out from a network.
   opt-out-vault                Opt-out from a vault.
+  opt-out-vault-signature      Get a signature for opt-out from a vault.
 
   --- for Vault Curators ---
 
@@ -82,4 +87,11 @@ Commands:
   deposit                      Deposit to the vault.
   withdraw                     Withdraw from the vault.
   claim                        Claim a withdrawal for some epoch at the vault.
+
+
+Options:
+  --help                       Show the command's description and exit.
+  --private-key           TEXT Private key to sign transactions with (only for write functionality).
+  --ledger                     Flag if to use a ledger to sign transactions (only for write functionality).
+  --ledger-address        TEXT Address of the ledger's account to use to sign transactions (only for write functionality).
 ```
