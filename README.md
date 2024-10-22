@@ -1,6 +1,10 @@
 # Symbiotic CLI (symb)
 
-Simple CLI tool for fetching data from symbiotic core smart contracts.
+Simple CLI tool for fetching data and interacting with Symbiotic core smart contracts.
+
+## Documentation
+
+Can be found [here](https://docs.symbiotic.fi/guides/cli).
 
 ## Install
 
@@ -12,15 +16,12 @@ pip3 install -r requirements.txt
 
 ```
 $ python3 symb.py
-Usage: symb.py [OPTIONS] COMMAND [ARGS]...
+Usage: symb.py [GENERAL_OPTIONS] COMMAND [ARGS] [OPTIONS]
 
-Options:
-  --provider        TEXT  Ethereum provider URL [http(s)]
-  --help                  Show this message and exit.
-  --private-key     TEXT  Private key to sign transactions with (only for write functionality).
-  --ledger                Flag if to use a ledger to sign transactions (only for write functionality). Make sure to install Ledger Live, open the Ethereum app, and enable the blind signing first.
-  --ledger-address  TEXT  Address of the ledger's account to use to sign transactions (only for write functionality).
-
+General options:
+  --help                       Show all the possible commands and exit.
+  --chain                TEXT  Chain ID to use.
+  --provider             TEXT  Ethereum provider URL [http(s)].
 
 Commands:
   --- for general use (related to Networks) ---
@@ -74,4 +75,11 @@ Commands:
   set-network-limit            Set a network limit at the vault's delegator.
   set-operator-network-limit   Set an operator-network limit at the vault's delegator.
   set-operator-network-shares  Set an operator-network shares at the vault's delegator.
+
+
+Options:
+  --help                       Show the command's description and exit.
+  --private-key           TEXT Private key to sign transactions with (only for write functionality).
+  --ledger                     Flag if to use a ledger to sign transactions (only for write functionality).
+  --ledger-address        TEXT Address of the ledger's account to use to sign transactions (only for write functionality).
 ```
