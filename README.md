@@ -62,9 +62,13 @@ Commands:
 
   register-operator            Register the signer as an operator.
   opt-in-network               Opt-in to a network.
+  opt-in-network-signature     Get a signature for opt-in to a network.
   opt-in-vault                 Opt-in to a vault.
+  opt-in-vault-signature       Get a signature for opt-in to a vault.
   opt-out-network              Opt-out from a network.
+  opt-out-network-signature    Get a signature for opt-out from a network.
   opt-out-vault                Opt-out from a vault.
+  opt-out-vault-signature      Get a signature for opt-out from a vault.
 
   --- for Vault Curators ---
 
