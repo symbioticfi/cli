@@ -51,6 +51,12 @@ Commands:
   vaultops                     List all operators opted into the given vault.
   vaultnetsops                 List all operators and their associated networks for the given vault.
 
+  --- for general use (related to Stakers) ---
+
+  active-balance-of            Get an active balance of a given account at a particular vault.
+  withdrawals-of               Get some epoch's withdrawals of a given account at a particular vault.
+  withdrawals-claimed          Check if some epoch's withdrawals of a given account at a particular vault are claimed.
+
   --- for Networks ---
 
   register-network             Register the signer as a network.
@@ -70,4 +76,10 @@ Commands:
   set-network-limit            Set a network limit at the vault's delegator.
   set-operator-network-limit   Set an operator-network limit at the vault's delegator.
   set-operator-network-shares  Set an operator-network shares at the vault's delegator.
+
+  --- for Stakers ---
+
+  deposit                      Deposit to the vault.
+  withdraw                     Withdraw from the vault.
+  claim                        Claim a withdrawal for some epoch at the vault.
 ```
