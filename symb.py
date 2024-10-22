@@ -680,7 +680,7 @@ class SymbioticCLI:
             },
             success_message=f"""
 Operator: {who}
-Vault: {where}
+Network: {where}
 Nonce: {nonce}
 Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M:%S")})
 """
@@ -718,7 +718,7 @@ Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M
             },
             success_message=f"""
 Operator: {who}
-Vault: {where}
+Network: {where}
 Nonce: {nonce}
 Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M:%S")})
 """
