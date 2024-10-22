@@ -588,6 +588,7 @@ class SymbioticCLI:
         who = self.get_address(private_key, ledger, ledger_address)
         entity = "op_net_opt_in"
         nonce = self.get_data(entity, self.ADDRESSES[entity], "nonces", who, where)
+        deadline = int(time()) + duration
         return self.process_type_data_sign(
             private_key,
             ledger,
@@ -607,8 +608,15 @@ class SymbioticCLI:
                 "who": who,
                 "where": where,
                 "nonce": nonce,
-                "deadline": int(time()) + duration,
+                "deadline": deadline,
             },
+            success_message=f"""
+Operator: {who}
+Vault: {where}
+Nonce: {nonce}
+Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M:%S")})
+"""
+            + "Success! Your signature is: {}",
         )
 
     def get_operator_network_opt_out_signature(
@@ -618,6 +626,7 @@ class SymbioticCLI:
         who = self.get_address(private_key, ledger, ledger_address)
         entity = "op_net_opt_in"
         nonce = self.get_data(entity, self.ADDRESSES[entity], "nonces", who, where)
+        deadline = int(time()) + duration
         return self.process_type_data_sign(
             private_key,
             ledger,
@@ -637,8 +646,15 @@ class SymbioticCLI:
                 "who": who,
                 "where": where,
                 "nonce": nonce,
-                "deadline": int(time()) + duration,
+                "deadline": deadline,
             },
+            success_message=f"""
+Operator: {who}
+Vault: {where}
+Nonce: {nonce}
+Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M:%S")})
+"""
+            + "Success! Your signature is: {}",
         )
 
     def get_operator_vault_opt_in_signature(
@@ -648,6 +664,7 @@ class SymbioticCLI:
         who = self.get_address(private_key, ledger, ledger_address)
         entity = "op_vault_opt_in"
         nonce = self.get_data(entity, self.ADDRESSES[entity], "nonces", who, where)
+        deadline = int(time()) + duration
         return self.process_type_data_sign(
             private_key,
             ledger,
@@ -667,8 +684,15 @@ class SymbioticCLI:
                 "who": who,
                 "where": where,
                 "nonce": nonce,
-                "deadline": int(time()) + duration,
+                "deadline": deadline,
             },
+            success_message=f"""
+Operator: {who}
+Vault: {where}
+Nonce: {nonce}
+Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M:%S")})
+"""
+            + "Success! Your signature is: {}",
         )
 
     def get_operator_vault_opt_out_signature(
@@ -678,6 +702,7 @@ class SymbioticCLI:
         who = self.get_address(private_key, ledger, ledger_address)
         entity = "op_vault_opt_in"
         nonce = self.get_data(entity, self.ADDRESSES[entity], "nonces", who, where)
+        deadline = int(time()) + duration
         return self.process_type_data_sign(
             private_key,
             ledger,
@@ -697,8 +722,15 @@ class SymbioticCLI:
                 "who": who,
                 "where": where,
                 "nonce": nonce,
-                "deadline": int(time()) + duration,
+                "deadline": deadline,
             },
+            success_message=f"""
+Operator: {who}
+Vault: {where}
+Nonce: {nonce}
+Deadline: {deadline} ({datetime.fromtimestamp(deadline).strftime("%Y-%m-%d %H:%M:%S")})
+"""
+            + "Success! Your signature is: {}",
         )
 
     def print_indented(self, *args, indent=2):
@@ -1693,7 +1725,7 @@ def opt_out_vault_signature(
     """
     vault_address = ctx.obj.normalize_address(vault_address)
 
-    ctx.obj.get_operator_vault_opt_in_signature(
+    ctx.obj.get_operator_vault_opt_out_signature(
         private_key,
         ledger,
         ledger_address,
@@ -1857,7 +1889,7 @@ def opt_out_network_signature(
     """
     network_address = ctx.obj.normalize_address(network_address)
 
-    ctx.obj.get_operator_network_opt_in_signature(
+    ctx.obj.get_operator_network_opt_out_signature(
         private_key,
         ledger,
         ledger_address,
