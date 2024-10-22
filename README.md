@@ -1,6 +1,6 @@
 # Symbiotic CLI (symb)
 
-Simple CLI tool for fetching data from symbiotic core smart contracts.
+Simple CLI tool for fetching data and interacting with Symbiotic core smart contracts.
 
 ## Documentation
 
