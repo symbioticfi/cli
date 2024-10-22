@@ -161,20 +161,20 @@ class SymbioticCLI:
 
     ADDRESSES = {
         "holesky": {
-            "op_registry": "0xa02C55a6306c859517A064fb34d48DFB773A4a52",
-            "net_registry": "0x5dEA088d2Be1473d948895cc26104bcf103CEf3E",
-            "op_vault_opt_in": "0x63E459f3E2d8F7f5E4AdBA55DE6c50CbB43dD563",
-            "op_net_opt_in": "0x973ba45986FF71742129d23C4138bb3fAd4f13A5",
-            "middleware_service": "0x70818a53ddE5c2e78Edfb6f6b277Be9a71fa894E",
-            "vault_factory": "0x5035c15F3cb4364CF2cF35ca53E3d6FC45FC8899",
+            "op_registry": "0x6F75a4ffF97326A00e52662d82EA4FdE86a2C548",
+            "net_registry": "0x7d03b7343BF8d5cEC7C0C27ecE084a20113D15C9",
+            "op_vault_opt_in": "0x95CC0a052ae33941877c9619835A233D21D57351",
+            "op_net_opt_in": "0x58973d16FFA900D11fC22e5e2B6840d9f7e13401",
+            "middleware_service": "0x0F7E58Cc4eA615E8B8BEB080dF8B8FDB63C21496",
+            "vault_factory": "0x407A039D94948484D356eFB765b3c74382A050B4",
         },
         "sepolia": {
-            "op_registry": "0xAc5Fe73E2829EeF6B408f349E936f9a817e6850D",
-            "net_registry": "0x6fEe87ff83799EB1eB5314B10296C4920C39803f",
-            "op_vault_opt_in": "0x03F9EcA88e1fbfca0Beb0E5Ad8d139Af218D09F5",
-            "op_net_opt_in": "0x470922527801b1bE917fD482778d0801877FD7b7",
-            "middleware_service": "0x1493b5D471a371998653d560dA89168723006C11",
-            "vault_factory": "0x90D6BF17d26D975611f20A8e2f15dF8eb957526D",
+            "op_registry": "0x6F75a4ffF97326A00e52662d82EA4FdE86a2C548",
+            "net_registry": "0x7d03b7343BF8d5cEC7C0C27ecE084a20113D15C9",
+            "op_vault_opt_in": "0x95CC0a052ae33941877c9619835A233D21D57351",
+            "op_net_opt_in": "0x58973d16FFA900D11fC22e5e2B6840d9f7e13401",
+            "middleware_service": "0x62a1ddfD86b4c1636759d9286D3A0EC722D086e3",
+            "vault_factory": "0x407A039D94948484D356eFB765b3c74382A050B4",
         },
         "mainnet": {
             "op_registry": "0x0000000000000000000000000000000000000000",
