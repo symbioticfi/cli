@@ -2388,11 +2388,12 @@ def deposit(
     token_address = ctx.obj.get_collateral(vault_address)
     wei_amount = ctx.obj.get_wei_amount(token_address, amount)
     symbol = ctx.obj.get_token_meta(token_address)["symbol"]
-
-    if not ctx.obj.process_request(
-        f"Are you sure you want to deposit {amount} {symbol} to vault = {vault_address} on behalf of {on_behalf_of}? (y/n)"
-    ):
-        return
+    
+    if on_behalf_of != signer:
+        if not ctx.obj.process_request(
+            f"Are you sure you want to deposit {amount} {symbol} to vault = {vault_address} on behalf of {on_behalf_of}? (y/n)"
+        ):
+            return
 
     allowance = ctx.obj.get_allowance(token_address, signer, vault_address)
 
@@ -2471,10 +2472,11 @@ def withdraw(
     wei_amount = ctx.obj.get_wei_amount(token_address, amount)
     symbol = ctx.obj.get_token_meta(token_address)["symbol"]
 
-    if not ctx.obj.process_request(
-        f"Are you sure you want to withdraw {amount} {symbol} from vault = {vault_address} with claimer = {claimer}? (y/n)"
-    ):
-        return
+    if claimer != signer:
+        if not ctx.obj.process_request(
+            f"Are you sure you want to withdraw {amount} {symbol} from vault = {vault_address} with claimer = {claimer}? (y/n)"
+        ):
+            return
 
     epoch_duration = ctx.obj.get_vault_epoch_duration(vault_address)
     current_epoch = ctx.obj.get_vault_current_epoch(vault_address)
@@ -2559,10 +2561,11 @@ def claim(
     token_address = ctx.obj.get_collateral(vault_address)
     symbol = ctx.obj.get_token_meta(token_address)["symbol"]
     withdrawals = ctx.obj.get_token_amount(token_address, withdrawals_wei)
-    if not ctx.obj.process_request(
-        f"Are you sure you want to claim {withdrawals} {symbol} from vault = {vault_address} to recipient = {recipient}? (y/n)"
-    ):
-        return
+    if recipient != signer:
+        if not ctx.obj.process_request(
+            f"Are you sure you want to claim {withdrawals} {symbol} from vault = {vault_address} to recipient = {recipient}? (y/n)"
+        ):
+            return
 
     ctx.obj.process_write_transaction(
         private_key,
