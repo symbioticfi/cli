@@ -126,7 +126,8 @@ class TokenAmountType(click.ParamType):
             self.fail(f"Token amount is too large: {value}", param, ctx)
 
         return amount
-    
+
+
 class ChainType(click.ParamType):
     name = "chain"
 
@@ -1571,7 +1572,7 @@ def withdrawals_of(ctx, vault_address, epoch, address):
     \b
     VAULT_ADDRESS - an address of the vault
     EPOCH - an epoch to get withdrawals for
-    ADDRESS - an address to get an active balance for
+    ADDRESS - an address to get withdrawals for
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     address = ctx.obj.normalize_address(address)
@@ -1593,8 +1594,8 @@ def withdrawals_claimed(ctx, vault_address, epoch, address):
 
     \b
     VAULT_ADDRESS - an address of the vault
-    EPOCH - an epoch to get withdrawals for
-    ADDRESS - an address to get an active balance for
+    EPOCH - an epoch to check for
+    ADDRESS - an address to get if the withdrawals are claimed for
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     address = ctx.obj.normalize_address(address)
@@ -2376,7 +2377,7 @@ def deposit(
     """Deposit to the vault.
 
     \b
-    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    VAULT_ADDRESS - an address of the vault to deposit to
     AMOUNT - an amount of tokens to deposit (in the token value, e.g., 1000 for 1000 ETH)
     ON_BEHALF_OF - an address to make a deposit on behalf of (default: address of the signer)
     """
@@ -2388,7 +2389,7 @@ def deposit(
     token_address = ctx.obj.get_collateral(vault_address)
     wei_amount = ctx.obj.get_wei_amount(token_address, amount)
     symbol = ctx.obj.get_token_meta(token_address)["symbol"]
-    
+
     if on_behalf_of != signer:
         if not ctx.obj.process_request(
             f"Are you sure you want to deposit {amount} {symbol} to vault = {vault_address} on behalf of {on_behalf_of}? (y/n)"
@@ -2459,8 +2460,8 @@ def withdraw(
     """Withdraw from the vault.
 
     \b
-    VAULT_ADDRESS - an address of the vault to adjust the delegations for
-    AMOUNT - an amount of tokens to deposit (in the token value, e.g., 1000 for 1000 ETH)
+    VAULT_ADDRESS - an address of the vault to withdraw from
+    AMOUNT - an amount of tokens to withdraw (in the token value, e.g., 1000 for 1000 ETH)
     CLAIMER - an address that needs to claim the withdrawal (default: address of the signer)
     """
     vault_address = ctx.obj.normalize_address(vault_address)
@@ -2533,7 +2534,7 @@ def claim(
     """Claim a withdrawal for some epoch at the vault.
 
     \b
-    VAULT_ADDRESS - an address of the vault to adjust the delegations for
+    VAULT_ADDRESS - an address of the vault to claim from
     EPOCH - an epoch number to claim a withdrawal for
     RECIPIENT - an address that will receive the tokens (default: address of the signer)
     """
