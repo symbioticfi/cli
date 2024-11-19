@@ -235,7 +235,7 @@ class SymbioticCLI:
         1: "VetoSlasher",
     }
 
-    MAX_SUBNETWORKS = 3  # TODO: Generalize subnetworks
+    SUBNETWORKS = [0, 1]  # TODO: Generalize subnetworks
 
     def __init__(self, chain, provider):
         self.chain = chain
@@ -435,7 +435,7 @@ class SymbioticCLI:
         vaults = self.get_vaults()
         w3_multicall = W3Multicall(self.w3)
         for vault in vaults:
-            for subnet_id in range(self.MAX_SUBNETWORKS):
+            for subnet_id in self.SUBNETWORKS:
                 w3_multicall.add(
                     W3Multicall.Call(
                         vault["delegator"],
@@ -448,7 +448,7 @@ class SymbioticCLI:
         results = []
         i = 0
         for vault in vaults:
-            for subnet_id in range(self.MAX_SUBNETWORKS):
+            for subnet_id in self.SUBNETWORKS:
                 limit = limits[i]
                 if limit and limit > 0:
                     try:
@@ -470,7 +470,7 @@ class SymbioticCLI:
         w3_multicall = W3Multicall(self.w3)
         for op in ops:
             for vault in vaults:
-                for subnet_id in range(self.MAX_SUBNETWORKS):
+                for subnet_id in self.SUBNETWORKS:
                     w3_multicall.add(
                         W3Multicall.Call(
                             vault["delegator"],
@@ -487,7 +487,7 @@ class SymbioticCLI:
         i = 0
         for op_idx in range(len(ops)):
             for vault in vaults:
-                for subnet_id in range(self.MAX_SUBNETWORKS):
+                for subnet_id in self.SUBNETWORKS:
                     stake = stakes[i]
                     if stake and stake > 0:
                         try:
@@ -510,7 +510,7 @@ class SymbioticCLI:
         for net in nets:
             net_vaults[net["net"]] = self.get_net_vaults(net["net"])
             for vault in net_vaults[net["net"]]:
-                for subnet_id in range(self.MAX_SUBNETWORKS):
+                for subnet_id in self.SUBNETWORKS:
                     w3_multicall.add(
                         W3Multicall.Call(
                             vault["delegator"],
@@ -529,7 +529,7 @@ class SymbioticCLI:
         i = 0
         for net_idx in range(len(nets)):
             for vault in net_vaults[nets[net_idx]["net"]]:
-                for subnet_id in range(self.MAX_SUBNETWORKS):
+                for subnet_id in self.SUBNETWORKS:
                     stake = stakes[i]
                     if stake and stake > 0:
                         try:
@@ -568,7 +568,7 @@ class SymbioticCLI:
 
         w3_multicall = W3Multicall(self.w3)
         for net in nets:
-            for subnet_id in range(self.MAX_SUBNETWORKS):
+            for subnet_id in self.SUBNETWORKS:
                 w3_multicall.add(
                     W3Multicall.Call(
                         delegator,
@@ -582,7 +582,7 @@ class SymbioticCLI:
         results = []
         i = 0
         for net in nets:
-            for subnet_id in range(self.MAX_SUBNETWORKS):
+            for subnet_id in self.SUBNETWORKS:
                 associated = net_associations[i]
                 if associated and associated > 0:
                     try:
@@ -1330,7 +1330,7 @@ def op_vault_net_stake(ctx, operator_address, vault_address, network_address):
 
     print(f"Operator stake in vault = {vault_address}")
     print()
-    for subnetwork_id in range(ctx.obj.MAX_SUBNETWORKS):
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
         subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
         stake = ctx.obj.get_stake(vault_address, subnetwork, operator_address)
@@ -1750,7 +1750,7 @@ def resolver(ctx, vault_address, network_address):
     network_address = ctx.obj.normalize_address(network_address)
 
     print()
-    for subnetwork_id in range(ctx.obj.MAX_SUBNETWORKS):
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
         subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
         slasher = ctx.obj.get_slasher(vault_address)
@@ -1782,7 +1782,7 @@ def pending_resolver(ctx, vault_address, network_address):
     network_address = ctx.obj.normalize_address(network_address)
 
     print()
-    for subnetwork_id in range(ctx.obj.MAX_SUBNETWORKS):
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
         subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
         slasher = ctx.obj.get_slasher(vault_address)
