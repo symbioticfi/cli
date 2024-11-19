@@ -222,11 +222,13 @@ class SymbioticCLI:
     DELEGATOR_TYPES_ENTITIES = {
         0: "network_restake_delegator",
         1: "full_restake_delegator",
+        2: "operator_specific_delegator",
     }
 
     DELEGATOR_TYPES_NAMES = {
         0: "NetworkRestake",
         1: "FullRestake",
+        2: "OperatorSpecific",
     }
 
     SLASHER_TYPES_NAMES = {
