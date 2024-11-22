@@ -198,7 +198,7 @@ class SymbioticCLI:
             "net_registry": "0x7d03b7343BF8d5cEC7C0C27ecE084a20113D15C9",
             "op_vault_opt_in": "0x95CC0a052ae33941877c9619835A233D21D57351",
             "op_net_opt_in": "0x58973d16FFA900D11fC22e5e2B6840d9f7e13401",
-            "middleware_service": "0x0F7E58Cc4eA615E8B8BEB080dF8B8FDB63C21496",
+            "middleware_service": "0x62a1ddfD86b4c1636759d9286D3A0EC722D086e3",
             "vault_factory": "0x407A039D94948484D356eFB765b3c74382A050B4",
         },
         "sepolia": {
@@ -222,11 +222,13 @@ class SymbioticCLI:
     DELEGATOR_TYPES_ENTITIES = {
         0: "network_restake_delegator",
         1: "full_restake_delegator",
+        2: "operator_specific_delegator",
     }
 
     DELEGATOR_TYPES_NAMES = {
         0: "NetworkRestake",
         1: "FullRestake",
+        2: "OperatorSpecific",
     }
 
     SLASHER_TYPES_NAMES = {
@@ -234,6 +236,8 @@ class SymbioticCLI:
         0: "InstantSlasher",
         1: "VetoSlasher",
     }
+
+    SUBNETWORKS = [0, 1]  # TODO: Generalize subnetworks
 
     def __init__(self, chain, provider):
         self.chain = chain
@@ -263,6 +267,10 @@ class SymbioticCLI:
 
     def normalize_address(self, address):
         return Web3.to_checksum_address(address)
+
+    def get_subnetwork(self, net, subnet_id=0):
+        net = self.normalize_address(net)
+        return f"{net}{hex(subnet_id)[2:].rjust(24, '0')}"
 
     def get_token_meta(self, token):
         token = self.normalize_address(token)
@@ -429,20 +437,29 @@ class SymbioticCLI:
         vaults = self.get_vaults()
         w3_multicall = W3Multicall(self.w3)
         for vault in vaults:
-            w3_multicall.add(
-                W3Multicall.Call(
-                    vault["delegator"],
-                    "networkLimit(bytes32)(uint256)",
-                    bytes.fromhex(net[2:]),  # TODO: fix subnets
+            for subnet_id in self.SUBNETWORKS:
+                w3_multicall.add(
+                    W3Multicall.Call(
+                        vault["delegator"],
+                        "networkLimit(bytes32)(uint256)",
+                        bytes.fromhex(self.get_subnetwork(net, subnet_id)[2:]),
+                    )
                 )
-            )
 
         limits = w3_multicall.call()
         results = []
-        for i, limit in enumerate(limits):
-            if limit and limit > 0:
-                vaults[i]["limit"] = limit
-                results.append(vaults[i])
+        i = 0
+        for vault in vaults:
+            for subnet_id in self.SUBNETWORKS:
+                limit = limits[i]
+                if limit and limit > 0:
+                    try:
+                        vault["limit"][subnet_id] = limit
+                    except:
+                        vault["limit"] = {subnet_id: limit}
+                i += 1
+            if vault.get("limit"):
+                results.append(vault)
 
         return results
 
@@ -455,55 +472,75 @@ class SymbioticCLI:
         w3_multicall = W3Multicall(self.w3)
         for op in ops:
             for vault in vaults:
-                w3_multicall.add(
-                    W3Multicall.Call(
-                        vault["delegator"],
-                        "stake(bytes32,address)(uint256)",
-                        [bytes.fromhex(net[2:]), op],  # TODO: fix subnets
+                for subnet_id in self.SUBNETWORKS:
+                    w3_multicall.add(
+                        W3Multicall.Call(
+                            vault["delegator"],
+                            "stake(bytes32,address)(uint256)",
+                            [
+                                bytes.fromhex(self.get_subnetwork(net, subnet_id)[2:]),
+                                op,
+                            ],
+                        )
                     )
-                )
 
         stakes = w3_multicall.call()
         results = [{"op": op, "vaults": []} for op in ops]
         i = 0
         for op_idx in range(len(ops)):
             for vault in vaults:
-                if stakes[i] > 0:
-                    vault["stake"] = stakes[i]
+                for subnet_id in self.SUBNETWORKS:
+                    stake = stakes[i]
+                    if stake and stake > 0:
+                        try:
+                            vault["stake"][subnet_id] = stake
+                        except:
+                            vault["stake"] = {subnet_id: stake}
+                    i += 1
+                if vault.get("stake"):
                     results[op_idx]["vaults"].append(vault)
-                i += 1
 
         return results
 
     def get_op_nets_vaults(self, op):
         """Fetch stakes of an operator in all networks."""
         op = self.normalize_address(op)
-        nets = self.get_op_nets(op)  # Fetch networks where the operator is opted in
+        nets = self.get_op_nets(op)
 
         w3_multicall = W3Multicall(self.w3)
         net_vaults = {}
         for net in nets:
-            # Get vaults in each network
             net_vaults[net["net"]] = self.get_net_vaults(net["net"])
             for vault in net_vaults[net["net"]]:
-                # Add multicalls to fetch stakes of the operator in each vault
-                w3_multicall.add(
-                    W3Multicall.Call(
-                        vault["delegator"],
-                        "stake(bytes32,address)(uint256)",
-                        [bytes.fromhex(net["net"][2:]), op],  # TODO: fix subnets
+                for subnet_id in self.SUBNETWORKS:
+                    w3_multicall.add(
+                        W3Multicall.Call(
+                            vault["delegator"],
+                            "stake(bytes32,address)(uint256)",
+                            [
+                                bytes.fromhex(
+                                    self.get_subnetwork(net["net"], subnet_id)[2:]
+                                ),
+                                op,
+                            ],
+                        )
                     )
-                )
 
         stakes = w3_multicall.call()
         results = [{"net": net["net"], "vaults": []} for net in nets]
         i = 0
         for net_idx in range(len(nets)):
             for vault in net_vaults[nets[net_idx]["net"]]:
-                if stakes[i] > 0:
-                    vault["stake"] = stakes[i]
+                for subnet_id in self.SUBNETWORKS:
+                    stake = stakes[i]
+                    if stake and stake > 0:
+                        try:
+                            vault["stake"][subnet_id] = stake
+                        except:
+                            vault["stake"] = {subnet_id: stake}
+                    i += 1
+                if vault.get("stake"):
                     results[net_idx]["vaults"].append(vault)
-                i += 1
 
         return results
 
@@ -533,24 +570,32 @@ class SymbioticCLI:
 
         w3_multicall = W3Multicall(self.w3)
         for net in nets:
-            w3_multicall.add(
-                W3Multicall.Call(
-                    delegator,
-                    "maxNetworkLimit(bytes32)(uint256)",
-                    bytes.fromhex(net["net"][2:]),  # TODO: fix subnets
+            for subnet_id in self.SUBNETWORKS:
+                w3_multicall.add(
+                    W3Multicall.Call(
+                        delegator,
+                        "maxNetworkLimit(bytes32)(uint256)",
+                        bytes.fromhex(self.get_subnetwork(net["net"], subnet_id)[2:]),
+                    )
                 )
-            )
 
         net_associations = w3_multicall.call()
 
-        return [
-            {
-                "net": net["net"],
-                "limit": associated,
-            }
-            for net, associated in zip(nets, net_associations)
-            if associated > 0
-        ]
+        results = []
+        i = 0
+        for net in nets:
+            for subnet_id in self.SUBNETWORKS:
+                associated = net_associations[i]
+                if associated and associated > 0:
+                    try:
+                        net["limit"][subnet_id] = associated
+                    except:
+                        net["limit"] = {subnet_id: associated}
+                i += 1
+            if net.get("limit"):
+                results.append({"net": net["net"], "limit": net["limit"]})
+
+        return results
 
     def get_vault_nets_ops(self, vault):
         """Get all operators opted into the vault and their associated networks."""
@@ -1211,10 +1256,11 @@ def netstakes(ctx, network_address):
                     f'Type: {ctx.obj.DELEGATOR_TYPES_NAMES[vault["delegator_type"]]} / {ctx.obj.SLASHER_TYPES_NAMES[vault["slasher_type"]]}',
                     indent=8,
                 )
+                stake = sum(vault["stake"].values())
                 ctx.obj.print_indented(
-                    f'Stake: {vault["stake"] / 10 ** token_meta["decimals"]}', indent=8
+                    f'Stake: {stake / 10 ** token_meta["decimals"]}', indent=8
                 )
-                stakes_sum += vault["stake"]
+                stakes_sum += stake
             total_op_stake += (
                 f'{stakes_sum / 10 ** token_meta["decimals"]} {token_meta["symbol"]} + '
             )
@@ -1284,30 +1330,39 @@ def op_vault_net_stake(ctx, operator_address, vault_address, network_address):
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
 
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+    print(f"Operator stake in vault = {vault_address}")
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
-    stake = ctx.obj.get_stake(vault_address, subnetwork, operator_address)
-    collateral = ctx.obj.get_collateral(vault_address)
-    token_meta = ctx.obj.get_token_meta(collateral)
-    stake_normalized = stake / 10 ** token_meta["decimals"]
-    collateral_symbol = token_meta["symbol"]
+        stake = ctx.obj.get_stake(vault_address, subnetwork, operator_address)
+        collateral = ctx.obj.get_collateral(vault_address)
+        token_meta = ctx.obj.get_token_meta(collateral)
+        stake_normalized = stake / 10 ** token_meta["decimals"]
+        collateral_symbol = token_meta["symbol"]
 
-    if delegator_type == 0:
-        operator_network_shares = ctx.obj.get_operator_network_shares(
-            delegator, subnetwork, operator_address
-        )
-        total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
-            delegator, subnetwork
-        )
-        percent = operator_network_shares / total_operator_network_shares * 100
+        if delegator_type == 0:
+            operator_network_shares = ctx.obj.get_operator_network_shares(
+                delegator, subnetwork, operator_address
+            )
+            total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
+                delegator, subnetwork
+            )
 
-        print(
-            f"Operator stake\nin vault = {vault_address}\nfor subnetwork = {subnetwork}\nis {stake_normalized} {collateral_symbol}\nwhich is {percent}% ({operator_network_shares} / {total_operator_network_shares} in shares) of network stake"
-        )
-    else:
-        print(
-            f"Operator stake in vault = {vault_address}\nfor subnetwork = {subnetwork}\nis {stake}"
-        )
+            percent = (
+                0
+                if total_operator_network_shares == 0
+                else operator_network_shares / total_operator_network_shares * 100
+            )
+
+            print(
+                f"for subnetwork = {subnetwork} is {stake_normalized} {collateral_symbol}\nwhich is {percent}% ({operator_network_shares} / {total_operator_network_shares} in shares) of network stake"
+            )
+        else:
+            print(
+                f"for subnetwork = {subnetwork} is {stake_normalized} {collateral_symbol}"
+            )
+        print()
 
 
 @cli.command()
@@ -1364,10 +1419,11 @@ def opstakes(ctx, operator_address):
                     f'Type: {ctx.obj.DELEGATOR_TYPES_NAMES[vault["delegator_type"]]} / {ctx.obj.SLASHER_TYPES_NAMES[vault["slasher_type"]]}',
                     indent=8,
                 )
+                stake = sum(vault["stake"].values())
                 ctx.obj.print_indented(
-                    f'Stake: {vault["stake"] / 10 ** token_meta["decimals"]}', indent=8
+                    f'Stake: {stake / 10 ** token_meta["decimals"]}', indent=8
                 )
-                stakes_sum += vault["stake"]
+                stakes_sum += stake
             total_net_stake += (
                 f'{stakes_sum / 10 ** token_meta["decimals"]} {token_meta["symbol"]} + '
             )
@@ -1639,6 +1695,7 @@ def register_network(ctx, private_key, ledger, ledger_address):
 @cli.command()
 @click.argument("vault_address", type=address_type)
 @click.argument("max_limit", type=uint256_type)
+@click.argument("subnetwork_id", default=0, type=uint96_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -1654,13 +1711,14 @@ def register_network(ctx, private_key, ledger, ledger_address):
 )
 @click.pass_context
 def set_max_network_limit(
-    ctx, vault_address, max_limit, private_key, ledger, ledger_address
+    ctx, vault_address, max_limit, subnetwork_id, private_key, ledger, ledger_address
 ):
     """Set a maximum network limit at the vault's delegator.
 
     \b
     VAULT_ADDRESS - an address of the vault to set a maximum limit for
     MAX_LIMIT - a maximum amount of stake a network is ready to get from the vault (in wei)
+    SUBNETWORK_ID - an identifier of the subnetwork to set a maximum limit for (default is 0)
     """
     vault_address = ctx.obj.normalize_address(vault_address)
 
@@ -1673,7 +1731,7 @@ def set_max_network_limit(
         "delegator",
         delegator,
         "setMaxNetworkLimit",
-        0,  # TODO: fix subnets
+        subnetwork_id,
         max_limit,
         success_message=f"Successfully set max limit = {max_limit} in vault = {vault_address}",
     )
@@ -1693,19 +1751,22 @@ def resolver(ctx, vault_address, network_address):
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
 
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
-    slasher = ctx.obj.get_slasher(vault_address)
-    slasher_type = ctx.obj.get_entity_type(slasher)
+        slasher = ctx.obj.get_slasher(vault_address)
+        slasher_type = ctx.obj.get_entity_type(slasher)
 
-    if slasher_type != 1:
-        print("It is not a VetoSlasher.")
-        return
+        if slasher_type != 1:
+            print("It is not a VetoSlasher.")
+            return
 
-    resolver = ctx.obj.get_resolver(slasher, subnetwork)
-    print(
-        f"Resolver for subnetwork = {subnetwork} at vault {vault_address} is {resolver}"
-    )
+        resolver = ctx.obj.get_resolver(slasher, subnetwork)
+        print(
+            f"Resolver for subnetwork = {subnetwork} at vault {vault_address} is {resolver}"
+        )
+        print()
 
 
 @cli.command()
@@ -1722,31 +1783,35 @@ def pending_resolver(ctx, vault_address, network_address):
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
 
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
-    slasher = ctx.obj.get_slasher(vault_address)
-    slasher_type = ctx.obj.get_entity_type(slasher)
+        slasher = ctx.obj.get_slasher(vault_address)
+        slasher_type = ctx.obj.get_entity_type(slasher)
 
-    if slasher_type != 1:
-        print("It is not a VetoSlasher.")
-        return
+        if slasher_type != 1:
+            print("It is not a VetoSlasher.")
+            return
 
-    resolver = ctx.obj.get_resolver(slasher, subnetwork)
-    pending_resolver = ctx.obj.get_pending_resolver(slasher, subnetwork)
+        resolver = ctx.obj.get_resolver(slasher, subnetwork)
+        pending_resolver = ctx.obj.get_pending_resolver(slasher, subnetwork)
 
-    if resolver == pending_resolver:
-        print(
-            f"There is no pending resolver for subnetwork = {subnetwork} at vault {vault_address}"
-        )
-    else:
-        print(
-            f"Pending resolver for subnetwork = {subnetwork} at vault {vault_address} is {pending_resolver}"
-        )
+        if resolver == pending_resolver:
+            print(
+                f"There is no pending resolver for subnetwork = {subnetwork} at vault {vault_address}"
+            )
+        else:
+            print(
+                f"Pending resolver for subnetwork = {subnetwork} at vault {vault_address} is {pending_resolver}"
+            )
+        print()
 
 
 @cli.command()
 @click.argument("vault_address", type=address_type)
 @click.argument("resolver", type=address_type)
+@click.argument("subnetwork_id", default=0, type=uint96_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -1761,12 +1826,15 @@ def pending_resolver(ctx, vault_address, network_address):
     help="The Ledger account address to use for signing (defaults to the first account if not provided)",
 )
 @click.pass_context
-def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_address):
+def set_resolver(
+    ctx, vault_address, resolver, subnetwork_id, private_key, ledger, ledger_address
+):
     """Set a resolver for a subnetwork at VetoSlasher.
 
     \b
     VAULT_ADDRESS - an address of the vault to set a resolver for
     RESOLVER - an address of the resolver to set
+    SUBNETWORK_ID - an identifier of the subnetwork to set a resolver for (default is 0)
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     resolver = ctx.obj.normalize_address(resolver)
@@ -1780,8 +1848,7 @@ def set_resolver(ctx, vault_address, resolver, private_key, ledger, ledger_addre
 
     net = ctx.obj.get_address(private_key, ledger, ledger_address)
 
-    identifier = 0
-    subnetwork = net + (64 - 40) * "0"  # TODO: fix subnets
+    subnetwork = ctx.obj.get_subnetwork(net, subnetwork_id)
 
     current_resolver = ctx.obj.get_resolver(slasher, subnetwork)
     pending_resolver = ctx.obj.get_pending_resolver(slasher, subnetwork)
@@ -1809,7 +1876,7 @@ Are you sure you want to remove the existing request and create a new one with a
         "veto_slasher",
         slasher,
         "setResolver",
-        identifier,
+        subnetwork_id,
         resolver,
         "0x",
         success_message=f"Successfully set resolver = {resolver} for subnetwork = {subnetwork} at vault = {vault_address}",
@@ -2147,6 +2214,7 @@ def opt_out_network_signature(
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
 @click.argument("limit", type=uint256_type)
+@click.argument("subnetwork_id", default=0, type=uint96_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -2162,7 +2230,14 @@ def opt_out_network_signature(
 )
 @click.pass_context
 def set_network_limit(
-    ctx, vault_address, network_address, limit, private_key, ledger, ledger_address
+    ctx,
+    vault_address,
+    network_address,
+    limit,
+    subnetwork_id,
+    private_key,
+    ledger,
+    ledger_address,
 ):
     """Set a network limit at the vault's delegator.
 
@@ -2170,11 +2245,12 @@ def set_network_limit(
     VAULT_ADDRESS - an address of the vault to adjust the delegations for
     NETWORK_ADDRESS - an address of the network to set a limit for
     LIMIT - a maximum amount of stake the network can get (in wei)
+    SUBNETWORK_ID - an identifier of the subnetwork to adjust the delegations for (default is 0)
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
 
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+    subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
@@ -2201,6 +2277,7 @@ def set_network_limit(
 @click.argument("network_address", type=address_type)
 @click.argument("operator_address", type=address_type)
 @click.argument("limit", type=uint256_type)
+@click.argument("subnetwork_id", default=0, type=uint96_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -2221,6 +2298,7 @@ def set_operator_network_limit(
     network_address,
     operator_address,
     limit,
+    subnetwork_id,
     private_key,
     ledger,
     ledger_address,
@@ -2232,12 +2310,13 @@ def set_operator_network_limit(
     NETWORK_ADDRESS - an address of the network
     OPERATOR_ADDRESS - an address of the operator to set a limit in the network for
     LIMIT - a maximum amount of stake the operator can get in the network (in wei)
+    SUBNETWORK_ID - an identifier of the subnetwork to adjust the delegations for (default is 0)
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
     operator_address = ctx.obj.normalize_address(operator_address)
 
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+    subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
@@ -2265,6 +2344,7 @@ def set_operator_network_limit(
 @click.argument("network_address", type=address_type)
 @click.argument("operator_address", type=address_type)
 @click.argument("shares", type=uint256_type)
+@click.argument("subnetwork_id", default=0, type=uint96_type)
 @click.option(
     "--private-key", type=bytes32_type, help="Your private key for signing transactions"
 )
@@ -2285,6 +2365,7 @@ def set_operator_network_shares(
     network_address,
     operator_address,
     shares,
+    subnetwork_id,
     private_key,
     ledger,
     ledger_address,
@@ -2296,12 +2377,13 @@ def set_operator_network_shares(
     NETWORK_ADDRESS - an address of the network
     OPERATOR_ADDRESS - an address of the operator to set shares in the network for
     SHARES - an amount of shares (determines a percent = operator shares / total shares of the network stake the operator can get) to set for the operator
+    SUBNETWORK_ID - an identifier of the subnetwork to adjust the delegations for (default is 0)
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
     operator_address = ctx.obj.normalize_address(operator_address)
 
-    subnetwork = network_address + (64 - 40) * "0"  # TODO: fix subnets
+    subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
 
     delegator = ctx.obj.get_delegator(vault_address)
     delegator_type = ctx.obj.get_entity_type(delegator)
@@ -2319,7 +2401,12 @@ def set_operator_network_shares(
     new_total_operator_network_shares = (
         total_operator_network_shares - operator_network_shares + shares
     )
-    percentage = shares / new_total_operator_network_shares * 100
+
+    percentage = (
+        0
+        if new_total_operator_network_shares == 0
+        else shares / new_total_operator_network_shares * 100
+    )
 
     if not ctx.obj.process_request(
         f"Are you sure you want to make operator = {operator_address} to get {percentage}% of the subnetwork = {subnetwork} stake? (y/n)"
