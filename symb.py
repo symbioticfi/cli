@@ -1191,14 +1191,36 @@ def middleware(ctx, network_address):
 
 
 @cli.command()
+@click.option(
+    "--full",
+    is_flag=True,
+    help="Show full data",
+)
 @click.pass_context
-def nets(ctx):
+def nets(ctx, full):
     """List all networks."""
     nets = ctx.obj.get_nets()
     print(f"All networks [{len(nets)} total]:")
+
+    if full:
+        for i, net in enumerate(nets):
+            op_vaults = ctx.obj.get_net_ops_vaults(net["net"])
+            nets[i]["ops"] = len(op_vaults)
+            vaults = {}
+            for op in op_vaults:
+                for vault in op["vaults"]:
+                    vaults[vault["vault"]] = 1
+            nets[i]["vaults"] = len(vaults)
+
     for net in nets:
         ctx.obj.print_indented(f'Network: {net["net"]}', indent=2)
-        ctx.obj.print_indented(f'Middleware: {net["middleware"]}\n', indent=4)
+        ctx.obj.print_indented(f'Middleware: {net["middleware"]}', indent=4)
+
+        if full:
+            ctx.obj.print_indented(f'Operators: {net["ops"]} total', indent=4)
+            ctx.obj.print_indented(f'Vaults: {net["vaults"]} total', indent=4)
+        ctx.obj.print_indented('\n', indent=0)
+
 
 
 @cli.command()
