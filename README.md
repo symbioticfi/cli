@@ -92,6 +92,6 @@ Commands:
 Options:
   --help                       Show the command's description and exit.
   --private-key           TEXT Private key to sign transactions with (only for write functionality).
-  --ledger                     Flag if to use a ledger to sign transactions (only for write functionality).
+  --ledger                     Flag to use a ledger to sign transactions (only for write functionality).
   --ledger-address        TEXT Address of the ledger's account to use to sign transactions (only for write functionality).
 ```
