@@ -1216,7 +1216,7 @@ def nets(ctx, full):
         if full:
             ctx.obj.print_indented(f'Operators: {net["ops"]} total', indent=4)
             ctx.obj.print_indented(f'Vaults: {net["vaults"]} total', indent=4)
-        ctx.obj.print_indented("\n", indent=0)
+        ctx.obj.print_indented("", indent=0)
 
 
 @cli.command()
