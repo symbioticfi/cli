@@ -1206,10 +1206,7 @@ def nets(ctx, full):
         for i, net in enumerate(nets):
             op_vaults = ctx.obj.get_net_ops_vaults(net["net"])
             nets[i]["ops"] = len(op_vaults)
-            vaults = {}
-            for op in op_vaults:
-                for vault in op["vaults"]:
-                    vaults[vault["vault"]] = 1
+            vaults = {vault["vault"] for op in op_vaults for vault in op["vaults"]}
             nets[i]["vaults"] = len(vaults)
 
     for net in nets:
@@ -1219,8 +1216,7 @@ def nets(ctx, full):
         if full:
             ctx.obj.print_indented(f'Operators: {net["ops"]} total', indent=4)
             ctx.obj.print_indented(f'Vaults: {net["vaults"]} total', indent=4)
-        ctx.obj.print_indented('\n', indent=0)
-
+        ctx.obj.print_indented("\n", indent=0)
 
 
 @cli.command()
