@@ -1042,7 +1042,7 @@ Deadline: {deadline} ({self.timestamp_to_datetime(deadline)})
         return {
             "name": name,
             "version": version,
-            "chainId": 17000,
+            "chainId": self.CHAIN_IDS[self.chain],
             "verifyingContract": str(verifyingContract),
         }
 
