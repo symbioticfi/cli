@@ -450,16 +450,14 @@ class SymbioticCLI:
         results = []
         i = 0
         for vault in vaults:
+            vault_limit = {}
             for subnet_id in self.SUBNETWORKS:
                 limit = limits[i]
                 if limit and limit > 0:
-                    try:
-                        vault["limit"][subnet_id] = limit
-                    except:
-                        vault["limit"] = {subnet_id: limit}
+                    vault_limit[subnet_id] = limit
                 i += 1
-            if vault.get("limit"):
-                results.append(vault)
+            if len(vault_limit):
+                results.append({"limit": vault_limit, **vault})
 
         return results
 
@@ -489,17 +487,14 @@ class SymbioticCLI:
         i = 0
         for op_idx in range(len(ops)):
             for vault in vaults:
+                vault_stake = {}
                 for subnet_id in self.SUBNETWORKS:
                     stake = stakes[i]
                     if stake and stake > 0:
-                        try:
-                            vault["stake"][subnet_id] = stake
-                        except:
-                            vault["stake"] = {subnet_id: stake}
+                        vault_stake[subnet_id] = stake
                     i += 1
-                if vault.get("stake"):
-                    results[op_idx]["vaults"].append(vault)
-
+                if len(vault_stake):
+                    results[op_idx]["vaults"].append({"stake": vault_stake, **vault})
         return results
 
     def get_op_nets_vaults(self, op):
@@ -531,16 +526,14 @@ class SymbioticCLI:
         i = 0
         for net_idx in range(len(nets)):
             for vault in net_vaults[nets[net_idx]["net"]]:
+                vault_stake = {}
                 for subnet_id in self.SUBNETWORKS:
                     stake = stakes[i]
                     if stake and stake > 0:
-                        try:
-                            vault["stake"][subnet_id] = stake
-                        except:
-                            vault["stake"] = {subnet_id: stake}
+                        vault_stake[subnet_id] = stake
                     i += 1
-                if vault.get("stake"):
-                    results[net_idx]["vaults"].append(vault)
+                if len(vault_stake):
+                    results[net_idx]["vaults"].append({"stake": vault_stake, **vault})
 
         return results
 
@@ -584,16 +577,14 @@ class SymbioticCLI:
         results = []
         i = 0
         for net in nets:
+            network_limit = {}
             for subnet_id in self.SUBNETWORKS:
                 associated = net_associations[i]
                 if associated and associated > 0:
-                    try:
-                        net["limit"][subnet_id] = associated
-                    except:
-                        net["limit"] = {subnet_id: associated}
+                    network_limit[subnet_id] = associated
                 i += 1
-            if net.get("limit"):
-                results.append({"net": net["net"], "limit": net["limit"]})
+            if len(network_limit):
+                results.append({"net": net["net"], "limit": network_limit})
 
         return results
 
