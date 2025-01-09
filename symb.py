@@ -136,8 +136,8 @@ class ChainType(click.ParamType):
         "17000": "holesky",
         "sepolia": "sepolia",
         "11155111": "sepolia",
-        # 'mainnet': 'mainnet',
-        # '1': 'mainnet',
+        'mainnet': 'mainnet',
+        '1': 'mainnet',
     }
 
     def convert(self, value, param, ctx):
@@ -211,11 +211,11 @@ class SymbioticCLI:
             "vault_factory": "0x407A039D94948484D356eFB765b3c74382A050B4",
         },
         "mainnet": {
-            "op_registry": "0x0000000000000000000000000000000000000000",
-            "net_registry": "0x0000000000000000000000000000000000000000",
+            "op_registry": "0xAd817a6Bc954F678451A71363f04150FDD81Af9F",
+            "net_registry": "0xC773b1011461e7314CF05f97d95aa8e92C1Fd8aA",
             "op_vault_opt_in": "0x0000000000000000000000000000000000000000",
             "op_net_opt_in": "0x0000000000000000000000000000000000000000",
-            "middleware_service": "0x0000000000000000000000000000000000000000",
+            "middleware_service": "0xD7dC9B366c027743D90761F71858BCa83C6899Ad",
             "vault_factory": "0x0000000000000000000000000000000000000000",
         },
     }
@@ -1178,7 +1178,7 @@ Deadline: {deadline} ({self.timestamp_to_datetime(deadline)})
 @click.group()
 @click.option(
     "--chain",
-    default="holesky",
+    default="mainnet",
     type=chain_type,
     show_default=True,
     help="Chain ID to use.",
@@ -1732,6 +1732,10 @@ def withdrawals_claimed(ctx, vault_address, epoch, address):
 def register_network(ctx, private_key, ledger, ledger_address):
     """Register the signer as a network."""
 
+    if not private_key and not ledger:
+        print("Private key or ledger is required")
+        return
+
     ctx.obj.process_write_transaction(
         private_key,
         ledger,
@@ -1954,6 +1958,10 @@ Are you sure you want to remove the existing request and create a new one with a
 @click.pass_context
 def register_operator(ctx, private_key, ledger, ledger_address):
     """Register the signer as an operator."""
+
+    if not private_key and not ledger:
+        print("Private key or ledger is required")
+        return
 
     ctx.obj.process_write_transaction(
         private_key,
