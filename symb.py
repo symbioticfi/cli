@@ -2594,12 +2594,12 @@ def set_operator_network_shares(
 @click.argument("operator_address", type=address_type)
 @click.pass_context
 def operator_network_shares(ctx, vault_address, network_address, operator_address):
-    """Get a current operator-network shares for an operator in the subnetwork.
+    """Get current operator-network shares for an operator in the subnetwork.
 
     \b
-    VAULT_ADDRESS - an address of the vault to get a operator-network shares for
-    NETWORK_ADDRESS - an address of the network to get a operator-network shares for
-    OPERATOR_ADDRESS - an address of the operator to get a operator-network shares for
+    VAULT_ADDRESS - an address of the vault to get operator-network shares for
+    NETWORK_ADDRESS - an address of the network to get operator-network shares for
+    OPERATOR_ADDRESS - an address of the operator to get operator-network shares for
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
@@ -2630,11 +2630,11 @@ def operator_network_shares(ctx, vault_address, network_address, operator_addres
 @click.argument("network_address", type=address_type)
 @click.pass_context
 def total_operator_network_shares(ctx, vault_address, network_address):
-    """Get a current operator-network shares for a subnetwork in a vault.
+    """Get current total operator-network shares for a subnetwork in a vault.
 
     \b
-    VAULT_ADDRESS - an address of the vault to get a operator-network shares for
-    NETWORK_ADDRESS - an address of the network to get a operator-network shares for
+    VAULT_ADDRESS - an address of the vault to get total operator-network shares for
+    NETWORK_ADDRESS - an address of the network to get total operator-network shares for
     """
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
