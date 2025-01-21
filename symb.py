@@ -136,8 +136,8 @@ class ChainType(click.ParamType):
         "17000": "holesky",
         "sepolia": "sepolia",
         "11155111": "sepolia",
-        'mainnet': 'mainnet',
-        '1': 'mainnet',
+        "mainnet": "mainnet",
+        "1": "mainnet",
     }
 
     def convert(self, value, param, ctx):
@@ -708,6 +708,12 @@ class SymbioticCLI:
     def get_vault_current_epoch_start(self, vault_address):
         vault_address = self.normalize_address(vault_address)
         return self.get_data("vault", vault_address, "currentEpochStart")
+
+    def get_max_network_limit(self, delegator_address, subnetwork):
+        delegator_address = self.normalize_address(delegator_address)
+        return self.get_data(
+            "full_restake_delegator", delegator_address, "maxNetworkLimit", subnetwork
+        )
 
     def get_network_limit(self, delegator_address, subnetwork):
         delegator_address = self.normalize_address(delegator_address)
@@ -1796,6 +1802,33 @@ def set_max_network_limit(
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
 @click.pass_context
+def max_network_limit(ctx, vault_address, network_address):
+    """Get a current maximum network limit for a subnetwork in a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get a maximum network limit for
+    NETWORK_ADDRESS - an address of the network to get a maximum network limit for
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    delegator = ctx.obj.get_delegator(vault_address)
+
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
+
+        max_network_limit = ctx.obj.get_max_network_limit(delegator, subnetwork)
+        print(
+            f"Maximum network limit for subnetwork = {subnetwork} at vault {vault_address} is {max_network_limit}"
+        )
+        print()
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.pass_context
 def resolver(ctx, vault_address, network_address):
     """Get a current resolver for a subnetwork in a vault.
 
@@ -1806,16 +1839,16 @@ def resolver(ctx, vault_address, network_address):
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
 
+    slasher = ctx.obj.get_slasher(vault_address)
+    slasher_type = ctx.obj.get_entity_type(slasher)
+
+    if slasher_type != 1:
+        print("It is not a VetoSlasher.")
+        return
+
     print()
     for subnetwork_id in ctx.obj.SUBNETWORKS:
         subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
-
-        slasher = ctx.obj.get_slasher(vault_address)
-        slasher_type = ctx.obj.get_entity_type(slasher)
-
-        if slasher_type != 1:
-            print("It is not a VetoSlasher.")
-            return
 
         resolver = ctx.obj.get_resolver(slasher, subnetwork)
         print(
@@ -1838,16 +1871,16 @@ def pending_resolver(ctx, vault_address, network_address):
     vault_address = ctx.obj.normalize_address(vault_address)
     network_address = ctx.obj.normalize_address(network_address)
 
+    slasher = ctx.obj.get_slasher(vault_address)
+    slasher_type = ctx.obj.get_entity_type(slasher)
+
+    if slasher_type != 1:
+        print("It is not a VetoSlasher.")
+        return
+
     print()
     for subnetwork_id in ctx.obj.SUBNETWORKS:
         subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
-
-        slasher = ctx.obj.get_slasher(vault_address)
-        slasher_type = ctx.obj.get_entity_type(slasher)
-
-        if slasher_type != 1:
-            print("It is not a VetoSlasher.")
-            return
 
         resolver = ctx.obj.get_resolver(slasher, subnetwork)
         pending_resolver = ctx.obj.get_pending_resolver(slasher, subnetwork)
@@ -2334,6 +2367,38 @@ def set_network_limit(
 @cli.command()
 @click.argument("vault_address", type=address_type)
 @click.argument("network_address", type=address_type)
+@click.pass_context
+def network_limit(ctx, vault_address, network_address):
+    """Get a current network limit for a subnetwork in a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get a network limit for
+    NETWORK_ADDRESS - an address of the network to get a network limit for
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type not in [0, 1, 2]:
+        print("Delegator doesn't have such functionality.")
+        return
+
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
+
+        network_limit = ctx.obj.get_network_limit(delegator, subnetwork)
+        print(
+            f"Network limit for subnetwork = {subnetwork} at vault {vault_address} is {network_limit}"
+        )
+        print()
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
 @click.argument("operator_address", type=address_type)
 @click.argument("limit", type=uint256_type)
 @click.argument("subnetwork_id", default=0, type=uint96_type)
@@ -2396,6 +2461,43 @@ def set_operator_network_limit(
         limit,
         success_message=f"Successfully set limit = {limit} for operator = {operator_address} in subnetwork = {subnetwork}",
     )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("operator_address", type=address_type)
+@click.pass_context
+def operator_network_limit(ctx, vault_address, network_address, operator_address):
+    """Get a current operator-network limit for an operator in the subnetwork.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get a operator-network limit for
+    NETWORK_ADDRESS - an address of the network to get a operator-network limit for
+    OPERATOR_ADDRESS - an address of the operator to get a operator-network limit for
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+    operator_address = ctx.obj.normalize_address(operator_address)
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type != 1:
+        print("It is not a FullRestakeDelegator.")
+        return
+
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
+
+        operator_network_limit = ctx.obj.get_operator_network_limit(
+            delegator, subnetwork, operator_address
+        )
+        print(
+            f"Operator-network limit for subnetwork = {subnetwork} and operator = {operator_address} at vault {vault_address} is {operator_network_limit}"
+        )
+        print()
 
 
 @cli.command()
@@ -2484,6 +2586,77 @@ def set_operator_network_shares(
         shares,
         success_message=f"Successfully set shares = {shares} for operator = {operator_address} in subnetwork = {subnetwork}",
     )
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.argument("operator_address", type=address_type)
+@click.pass_context
+def operator_network_shares(ctx, vault_address, network_address, operator_address):
+    """Get current operator-network shares for an operator in the subnetwork.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get operator-network shares for
+    NETWORK_ADDRESS - an address of the network to get operator-network shares for
+    OPERATOR_ADDRESS - an address of the operator to get operator-network shares for
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+    operator_address = ctx.obj.normalize_address(operator_address)
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type != 0:
+        print("It is not a NetworkRestakeDelegator.")
+        return
+
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
+
+        operator_network_shares = ctx.obj.get_operator_network_shares(
+            delegator, subnetwork, operator_address
+        )
+        print(
+            f"Operator-network shares for subnetwork = {subnetwork} and operator = {operator_address} at vault {vault_address} is {operator_network_shares}"
+        )
+        print()
+
+
+@cli.command()
+@click.argument("vault_address", type=address_type)
+@click.argument("network_address", type=address_type)
+@click.pass_context
+def total_operator_network_shares(ctx, vault_address, network_address):
+    """Get current total operator-network shares for a subnetwork in a vault.
+
+    \b
+    VAULT_ADDRESS - an address of the vault to get total operator-network shares for
+    NETWORK_ADDRESS - an address of the network to get total operator-network shares for
+    """
+    vault_address = ctx.obj.normalize_address(vault_address)
+    network_address = ctx.obj.normalize_address(network_address)
+
+    delegator = ctx.obj.get_delegator(vault_address)
+    delegator_type = ctx.obj.get_entity_type(delegator)
+
+    if delegator_type != 0:
+        print("It is not a NetworkRestakeDelegator.")
+        return
+
+    print()
+    for subnetwork_id in ctx.obj.SUBNETWORKS:
+        subnetwork = ctx.obj.get_subnetwork(network_address, subnetwork_id)
+
+        total_operator_network_shares = ctx.obj.get_total_operator_network_shares(
+            delegator, subnetwork
+        )
+        print(
+            f"Total operator-network shares for subnetwork = {subnetwork} at vault {vault_address} is {total_operator_network_shares}"
+        )
+        print()
 
 
 ### STAKER CLI COMMANDS ###
