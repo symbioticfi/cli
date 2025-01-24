@@ -213,10 +213,10 @@ class SymbioticCLI:
         "mainnet": {
             "op_registry": "0xAd817a6Bc954F678451A71363f04150FDD81Af9F",
             "net_registry": "0xC773b1011461e7314CF05f97d95aa8e92C1Fd8aA",
-            "op_vault_opt_in": "0x0000000000000000000000000000000000000000",
-            "op_net_opt_in": "0x0000000000000000000000000000000000000000",
+            "op_vault_opt_in": "0xb361894bC06cbBA7Ea8098BF0e32EB1906A5F891",
+            "op_net_opt_in": "0x7133415b33B438843D581013f98A08704316633c",
             "middleware_service": "0xD7dC9B366c027743D90761F71858BCa83C6899Ad",
-            "vault_factory": "0x0000000000000000000000000000000000000000",
+            "vault_factory": "0xAEb6bdd95c502390db8f52c8909F703E9Af6a346",
         },
     }
 
