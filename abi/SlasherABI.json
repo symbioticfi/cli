@@ -1,0 +1,227 @@
+[
+  {
+    "inputs": [
+      { "internalType": "address", "name": "vaultFactory", "type": "address" },
+      {
+        "internalType": "address",
+        "name": "networkMiddlewareService",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "slasherFactory",
+        "type": "address"
+      },
+      { "internalType": "uint64", "name": "entityType", "type": "uint64" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  { "inputs": [], "name": "CheckpointUnorderedInsertion", "type": "error" },
+  { "inputs": [], "name": "InsufficientBurnerGas", "type": "error" },
+  { "inputs": [], "name": "InsufficientSlash", "type": "error" },
+  { "inputs": [], "name": "InvalidCaptureTimestamp", "type": "error" },
+  { "inputs": [], "name": "InvalidInitialization", "type": "error" },
+  { "inputs": [], "name": "NoBurner", "type": "error" },
+  { "inputs": [], "name": "NotInitialized", "type": "error" },
+  { "inputs": [], "name": "NotInitializing", "type": "error" },
+  { "inputs": [], "name": "NotNetworkMiddleware", "type": "error" },
+  { "inputs": [], "name": "NotVault", "type": "error" },
+  { "inputs": [], "name": "ReentrancyGuardReentrantCall", "type": "error" },
+  {
+    "inputs": [
+      { "internalType": "uint8", "name": "bits", "type": "uint8" },
+      { "internalType": "uint256", "name": "value", "type": "uint256" }
+    ],
+    "name": "SafeCastOverflowedUintDowncast",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "version",
+        "type": "uint64"
+      }
+    ],
+    "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "subnetwork",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "slashedAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint48",
+        "name": "captureTimestamp",
+        "type": "uint48"
+      }
+    ],
+    "name": "Slash",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "BURNER_GAS_LIMIT",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "BURNER_RESERVE",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "FACTORY",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "NETWORK_MIDDLEWARE_SERVICE",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "TYPE",
+    "outputs": [{ "internalType": "uint64", "name": "", "type": "uint64" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "VAULT_FACTORY",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "operator", "type": "address" }
+    ],
+    "name": "cumulativeSlash",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "operator", "type": "address" },
+      { "internalType": "uint48", "name": "timestamp", "type": "uint48" },
+      { "internalType": "bytes", "name": "hint", "type": "bytes" }
+    ],
+    "name": "cumulativeSlashAt",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "bytes", "name": "data", "type": "bytes" }],
+    "name": "initialize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isBurnerHook",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "operator", "type": "address" }
+    ],
+    "name": "latestSlashedCaptureTimestamp",
+    "outputs": [
+      { "internalType": "uint48", "name": "value", "type": "uint48" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "operator", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" },
+      {
+        "internalType": "uint48",
+        "name": "captureTimestamp",
+        "type": "uint48"
+      },
+      { "internalType": "bytes", "name": "hints", "type": "bytes" }
+    ],
+    "name": "slash",
+    "outputs": [
+      { "internalType": "uint256", "name": "slashedAmount", "type": "uint256" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "operator", "type": "address" },
+      {
+        "internalType": "uint48",
+        "name": "captureTimestamp",
+        "type": "uint48"
+      },
+      { "internalType": "bytes", "name": "hints", "type": "bytes" }
+    ],
+    "name": "slashableStake",
+    "outputs": [
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "target", "type": "address" },
+      { "internalType": "bytes", "name": "data", "type": "bytes" }
+    ],
+    "name": "staticDelegateCall",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vault",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

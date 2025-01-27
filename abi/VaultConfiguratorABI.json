@@ -1,0 +1,75 @@
+[
+  {
+    "inputs": [
+      { "internalType": "address", "name": "vaultFactory", "type": "address" },
+      {
+        "internalType": "address",
+        "name": "delegatorFactory",
+        "type": "address"
+      },
+      { "internalType": "address", "name": "slasherFactory", "type": "address" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "DELEGATOR_FACTORY",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "SLASHER_FACTORY",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "VAULT_FACTORY",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          { "internalType": "uint64", "name": "version", "type": "uint64" },
+          { "internalType": "address", "name": "owner", "type": "address" },
+          { "internalType": "bytes", "name": "vaultParams", "type": "bytes" },
+          {
+            "internalType": "uint64",
+            "name": "delegatorIndex",
+            "type": "uint64"
+          },
+          {
+            "internalType": "bytes",
+            "name": "delegatorParams",
+            "type": "bytes"
+          },
+          { "internalType": "bool", "name": "withSlasher", "type": "bool" },
+          {
+            "internalType": "uint64",
+            "name": "slasherIndex",
+            "type": "uint64"
+          },
+          { "internalType": "bytes", "name": "slasherParams", "type": "bytes" }
+        ],
+        "internalType": "struct IVaultConfigurator.InitParams",
+        "name": "params",
+        "type": "tuple"
+      }
+    ],
+    "name": "create",
+    "outputs": [
+      { "internalType": "address", "name": "vault", "type": "address" },
+      { "internalType": "address", "name": "delegator", "type": "address" },
+      { "internalType": "address", "name": "slasher", "type": "address" }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

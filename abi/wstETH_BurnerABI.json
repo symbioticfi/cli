@@ -1,0 +1,170 @@
+[
+  {
+    "inputs": [
+      { "internalType": "address", "name": "collateral", "type": "address" },
+      {
+        "internalType": "address",
+        "name": "lidoWithdrawalQueue",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  { "inputs": [], "name": "InsufficientWithdrawal", "type": "error" },
+  { "inputs": [], "name": "InvalidRequestId", "type": "error" },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "requestId",
+        "type": "uint256"
+      }
+    ],
+    "name": "TriggerBurn",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "requestIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "TriggerBurnBatch",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "requestIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "TriggerWithdrawal",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "COLLATERAL",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "LIDO_WITHDRAWAL_QUEUE",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_STETH_WITHDRAWAL_AMOUNT",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_STETH_WITHDRAWAL_AMOUNT",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "STETH",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "index", "type": "uint256" },
+      { "internalType": "uint256", "name": "maxRequestIds", "type": "uint256" }
+    ],
+    "name": "requestIds",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "requestIds_",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "requestIdsLength",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "requestId", "type": "uint256" }
+    ],
+    "name": "triggerBurn",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "requestIds_",
+        "type": "uint256[]"
+      },
+      { "internalType": "uint256[]", "name": "hints", "type": "uint256[]" }
+    ],
+    "name": "triggerBurnBatch",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "maxRequests", "type": "uint256" }
+    ],
+    "name": "triggerWithdrawal",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "requestIds_",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  { "stateMutability": "payable", "type": "receive" }
+]
