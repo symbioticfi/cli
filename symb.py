@@ -293,7 +293,7 @@ class SymbioticCLI:
                         type_sig = f"{error_name}()"
                     else:
                         input_types = [inp["type"] for inp in item["inputs"]]
-                        type_sig = f"{error_name}({",".join(input_types)})"
+                        type_sig = f"{error_name}({','.join(input_types)})"
 
                     selector = Web3.keccak(text=type_sig)[:4].hex()
 
