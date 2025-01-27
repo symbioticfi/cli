@@ -539,6 +539,41 @@ class SymbioticCLI:
                     results[op_idx]["vaults"].append({"stake": vault_stake, **vault})
         return results
 
+    def get_vault_nets_ops(self, vault):
+        vault = self.normalize_address(vault)
+        nets = self.get_vault_nets(vault)
+        ops = self.get_vault_ops(vault)
+
+        w3_multicall = W3Multicall(self.w3)
+        for op in ops:
+            for vault in vaults:
+                for subnet_id in self.SUBNETWORKS:
+                    w3_multicall.add(
+                        W3Multicall.Call(
+                            vault["delegator"],
+                            "stake(bytes32,address)(uint256)",
+                            [
+                                bytes.fromhex(self.get_subnetwork(net, subnet_id)[2:]),
+                                op,
+                            ],
+                        )
+                    )
+
+        stakes = w3_multicall.call()
+        results = [{"op": op, "vaults": []} for op in ops]
+        i = 0
+        for op_idx in range(len(ops)):
+            for vault in vaults:
+                vault_stake = {}
+                for subnet_id in self.SUBNETWORKS:
+                    stake = stakes[i]
+                    if stake and stake > 0:
+                        vault_stake[subnet_id] = stake
+                    i += 1
+                if len(vault_stake):
+                    results[op_idx]["vaults"].append({"stake": vault_stake, **vault})
+        return results
+
     def get_op_nets_vaults(self, op):
         """Fetch stakes of an operator in all networks."""
         op = self.normalize_address(op)
@@ -1557,11 +1592,23 @@ def isvault(ctx, address):
 
 
 @cli.command()
+@click.option(
+    "--full",
+    is_flag=True,
+    help="Show full data",
+)
 @click.pass_context
-def vaults(ctx):
+def vaults(ctx, full):
     """List all vaults."""
     vaults = ctx.obj.get_vaults()
     print(f"All vaults [{len(vaults)} total]:")
+
+    if full:
+        for vault in vaults:
+            vault["networks"] = ctx.obj.get_vault_nets(vault["vault"])
+
+            print(vault["networks"])
+
     for vault in vaults:
         ctx.obj.print_indented(f'Vault: {vault["vault"]}')
         collateral_meta = ctx.obj.get_token_meta(vault["collateral"])
@@ -1576,6 +1623,20 @@ def vaults(ctx):
         ctx.obj.print_indented(
             f'Slasher: {vault["slasher"]} ({slasher_type})\n', indent=4
         )
+        ctx.obj.print_indented(f'TVL: {vault["tvl"]}\n', indent=4)
+
+        if full:
+            ctx.obj.print_indented(
+                f'Networks [{len(vault["networks"])} total]:', indent=4
+            )
+            for net in vault["networks"]:
+                ctx.obj.print_indented(f"Network: {net['net']}", indent=6)
+                ctx.obj.print_indented(
+                    f"Operators [{len(net['operators'])} total]:", indent=6
+                )
+                ctx.obj.print_indented(
+                    f"Total delegated: {net['total_delegated']}", indent=6
+                )
 
 
 @cli.command()
