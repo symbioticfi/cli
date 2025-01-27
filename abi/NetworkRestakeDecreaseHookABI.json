@@ -1,0 +1,20 @@
+[
+  { "inputs": [], "name": "NotNetworkRestakeDelegator", "type": "error" },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "operator", "type": "address" },
+      { "internalType": "uint256", "name": "slashedAmount", "type": "uint256" },
+      {
+        "internalType": "uint48",
+        "name": "captureTimestamp",
+        "type": "uint48"
+      },
+      { "internalType": "bytes", "name": "data", "type": "bytes" }
+    ],
+    "name": "onSlash",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

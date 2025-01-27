@@ -1,0 +1,16 @@
+[
+  { "inputs": [], "name": "NotOperatorSpecificDelegator", "type": "error" },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" },
+      { "internalType": "address", "name": "", "type": "address" },
+      { "internalType": "uint256", "name": "slashedAmount", "type": "uint256" },
+      { "internalType": "uint48", "name": "", "type": "uint48" },
+      { "internalType": "bytes", "name": "", "type": "bytes" }
+    ],
+    "name": "onSlash",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
