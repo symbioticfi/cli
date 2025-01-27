@@ -13,6 +13,9 @@ from datetime import datetime
 from time import time
 import re
 from decimal import Decimal, InvalidOperation
+import json
+import os
+from eth_abi import abi
 
 
 class AddressType(click.ParamType):
@@ -175,28 +178,30 @@ class SymbioticCLI:
         "mainnet": "https://ethereum-rpc.publicnode.com",
     }
 
-    def load_abi(name):
-        abis_path = f"./abi"
+    ABIS_PATH = "./abi"
+
+    @staticmethod
+    def load_abi(abis_path, name):
         return open(f"{abis_path}/{name}ABI.json", "r").read()
 
     ABIS = {
-        "op_registry": load_abi("OperatorRegistry"),
-        "net_registry": load_abi("NetworkRegistry"),
-        "op_vault_opt_in": load_abi("OperatorVaultOptInService"),
-        "op_net_opt_in": load_abi("OperatorNetworkOptInService"),
-        "middleware_service": load_abi("NetworkMiddlewareService"),
-        "vault_factory": load_abi("VaultFactory"),
-        "entity": load_abi("NetworkRestakeDelegator"),
-        "delegator": load_abi("NetworkRestakeDelegator"),
-        "network_restake_delegator": load_abi("NetworkRestakeDelegator"),
-        "full_restake_delegator": load_abi("FullRestakeDelegator"),
-        "operator_specific_delegator": load_abi("OperatorSpecificDelegator"),
+        "op_registry": load_abi(ABIS_PATH, "OperatorRegistry"),
+        "net_registry": load_abi(ABIS_PATH, "NetworkRegistry"),
+        "op_vault_opt_in": load_abi(ABIS_PATH, "OperatorVaultOptInService"),
+        "op_net_opt_in": load_abi(ABIS_PATH, "OperatorNetworkOptInService"),
+        "middleware_service": load_abi(ABIS_PATH, "NetworkMiddlewareService"),
+        "vault_factory": load_abi(ABIS_PATH, "VaultFactory"),
+        "entity": load_abi(ABIS_PATH, "NetworkRestakeDelegator"),
+        "delegator": load_abi(ABIS_PATH, "NetworkRestakeDelegator"),
+        "network_restake_delegator": load_abi(ABIS_PATH, "NetworkRestakeDelegator"),
+        "full_restake_delegator": load_abi(ABIS_PATH, "FullRestakeDelegator"),
+        "operator_specific_delegator": load_abi(ABIS_PATH, "OperatorSpecificDelegator"),
         "operator_network_specific_delegator": load_abi(
-            "OperatorNetworkSpecificDelegator"
+            ABIS_PATH, "OperatorNetworkSpecificDelegator"
         ),
-        "veto_slasher": load_abi("VetoSlasher"),
-        "vault": load_abi("Vault"),
-        "erc20": load_abi("VaultTokenized"),
+        "veto_slasher": load_abi(ABIS_PATH, "VetoSlasher"),
+        "vault": load_abi(ABIS_PATH, "Vault"),
+        "erc20": load_abi(ABIS_PATH, "VaultTokenized"),
     }
 
     ADDRESSES = {
@@ -266,6 +271,9 @@ class SymbioticCLI:
         self._cache = {"token_meta": {}}
         self.init_contracts()
 
+        self._error_selectors = {}
+        self.build_error_selector_map()
+
         print(f"Connected to chain ID {self.w3.eth.chain_id}")
 
     def init_contracts(self):
@@ -273,6 +281,23 @@ class SymbioticCLI:
             self.contracts[name] = self.w3.eth.contract(
                 address=address, abi=self.ABIS[name]
             )
+
+    def build_error_selector_map(self):
+        for abi_name in os.listdir(self.ABIS_PATH):
+            parsed_abi = json.loads(open(f"{self.ABIS_PATH}/{abi_name}", "r").read())
+            for item in parsed_abi:
+                if item.get("type") == "error":
+                    error_name = item["name"]
+                    if len(item["inputs"]) == 0:
+                        input_types = []
+                        type_sig = f"{error_name}()"
+                    else:
+                        input_types = [inp["type"] for inp in item["inputs"]]
+                        type_sig = f"{error_name}({",".join(input_types)})"
+
+                    selector = Web3.keccak(text=type_sig)[:4].hex()
+
+                    self._error_selectors[selector] = (error_name, input_types)
 
     def normalize_address(self, address):
         return Web3.to_checksum_address(address)
@@ -967,6 +992,50 @@ Deadline: {deadline} ({self.timestamp_to_datetime(deadline)})
             + "Success! Your signature is: {}",
         )
 
+    def decode_error_data(self, error_data: str):
+        if not error_data.startswith("0x"):
+            error_data = "0x" + error_data
+        if len(error_data) < 10:
+            return None
+
+        selector = error_data[:10]
+        encoded_args = error_data[10:]
+
+        if selector in self._error_selectors:
+            error_name, input_types = self._error_selectors[selector]
+            if not input_types:
+                return (error_name, [])
+            encoded_bytes = bytes.fromhex(encoded_args)
+            decoded = abi.decode(input_types, encoded_bytes)
+
+            return (error_name, decoded)
+        elif selector == "0x08c379a0":
+            # "Error(string)"
+            encoded_bytes = bytes.fromhex(encoded_args)
+            reason_str = abi.decode(["string"], encoded_bytes)[0]
+            return ("Error(string)", [reason_str])
+        elif selector == "0x4e487b71":
+            # "Panic(uint256)"
+            encoded_bytes = bytes.fromhex(encoded_args)
+            panic_code = abi.decode(["uint256"], encoded_bytes)[0]
+            return ("Panic(uint256)", [panic_code])
+
+        return None
+
+    def process_error(self, e):
+        raw_msg = str(e.args[0])
+        m = re.search(r"(0x[0-9a-fA-F]+)", raw_msg)
+        if m:
+            revert_hex = m.group(1)
+            decoded = self.decode_error_data(revert_hex)
+            if decoded:
+                error_name, params = decoded
+                print(f"Reverted with {error_name}({params if params else ''})")
+            else:
+                print(f"Reverted with unknown error data: {revert_hex}")
+        else:
+            print(f"Reverted, no error data found: {raw_msg}")
+
     def print_indented(self, *args, indent=2):
         print(" " * indent + " ".join(map(str, args)))
 
@@ -1078,9 +1147,8 @@ Deadline: {deadline} ({self.timestamp_to_datetime(deadline)})
             print(success_message)
 
             return tx_receipt
-
         except Exception as e:
-            print(f"Failed! Reason: {e}")
+            self.process_error(e)
 
     def get_domain_data(self, name, version, verifyingContract):
         verifyingContract = self.normalize_address(verifyingContract)
@@ -1172,7 +1240,7 @@ Deadline: {deadline} ({self.timestamp_to_datetime(deadline)})
             return signature
 
         except Exception as e:
-            print(f"Failed! Reason: {e}")
+            self.process_error(e)
 
     def process_request(self, request_text):
         response = input(f"{request_text}")
