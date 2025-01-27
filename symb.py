@@ -1705,7 +1705,7 @@ def vaults(ctx, full):
             vault_data = ctx.obj.get_vault_nets_ops_full(vault)
             ctx.obj.print_indented(f"Networks [{len(vault_data)} total]:", indent=4)
             ctx.obj.print_indented(
-                f"Total delegated: {sum([sum(op["stake"].values()) for net_data in vault_data for op in net_data['ops']]) / 10 ** collateral_meta["decimals"]} {collateral_meta["symbol"]}",
+                f"Total delegated: {sum([sum(op['stake'].values()) for net_data in vault_data for op in net_data['ops']]) / 10 ** collateral_meta['decimals']} {collateral_meta['symbol']}",
                 indent=4,
             )
             for net_data in vault_data:
@@ -1714,7 +1714,7 @@ def vaults(ctx, full):
                     f"Operators [{len(net_data['ops'])} total]", indent=6
                 )
                 ctx.obj.print_indented(
-                    f"Delegated to network: {sum([sum(op["stake"].values()) for op in net_data['ops']]) / 10 ** collateral_meta["decimals"]} {collateral_meta["symbol"]}",
+                    f"Delegated to network: {sum([sum(op['stake'].values()) for op in net_data['ops']]) / 10 ** collateral_meta['decimals']} {collateral_meta['symbol']}",
                     indent=6,
                 )
                 print()
