@@ -6,6 +6,10 @@ Simple CLI tool for fetching data and interacting with Symbiotic core smart cont
 
 Can be found [here](https://docs.symbiotic.fi/guides/cli).
 
+## Prerequisites
+
+- Python >=3.8
+
 ## Install
 
 ```bash
