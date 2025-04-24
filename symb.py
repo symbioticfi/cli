@@ -164,6 +164,10 @@ token_amount_type = TokenAmountType()
 chain_type = ChainType()
 
 
+def load_abi(abis_path, name):
+    return open(f"{abis_path}/{name}ABI.json", "r").read()
+
+
 class SymbioticCLI:
 
     CHAIN_IDS = {
@@ -179,10 +183,6 @@ class SymbioticCLI:
     }
 
     ABIS_PATH = "./abi"
-
-    @staticmethod
-    def load_abi(abis_path, name):
-        return open(f"{abis_path}/{name}ABI.json", "r").read()
 
     ABIS = {
         "op_registry": load_abi(ABIS_PATH, "OperatorRegistry"),
