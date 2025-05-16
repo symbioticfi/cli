@@ -37,8 +37,8 @@ Commands:
   netstakes                      Show stakes of all operators in network.
   max-network-limit              Get a maximum network limit at the vault's delegator.
   network-limit                  Get a network limit at the vault's delegator.
-  pending-resolver               Get a current resolver for a subnetwork in a vault.
-  resolver                       Get a pending resolver for a subnetwork in a vault.
+  pending-resolver               Get a pending resolver for a subnetwork in a vault.
+  resolver                       Get a current resolver for a subnetwork in a vault.
 
   --- for general use (related to Operators) ---
 
