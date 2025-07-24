@@ -2,6 +2,8 @@
 
 Simple CLI tool for fetching data and interacting with Symbiotic core smart contracts.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/symbioticfi/cli)
+
 ## Documentation
 
 Can be found [here](https://docs.symbiotic.fi/guides/cli).
