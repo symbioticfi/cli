@@ -10,15 +10,58 @@ Can be found [here](https://docs.symbiotic.fi/guides/cli).
 
 ## Prerequisites
 
-- Python >=3.8
+- Node >= 20
+- pnpm
+
+Legacy (Python CLI):
+- Python >= 3.8
 
 ## Install
 
 ```bash
-pip3 install -r requirements.txt
+pnpm install
 ```
 
 ## Usage
+
+### TypeScript + viem CLI (recommended)
+
+```bash
+# Help
+pnpm dev -- --help
+
+# Build
+pnpm build
+
+# Run built CLI
+node dist/index.js --help
+```
+
+RPC + chain selection:
+
+```bash
+node dist/index.js --chain mainnet nets
+node dist/index.js --chain 17000 --provider https://ethereum-holesky-rpc.publicnode.com nets
+```
+
+Write/signature commands require a signer:
+- `--private-key <hex>` (discouraged) or `SYMB_PRIVATE_KEY`.
+- Ledger: `--ledger` (optionally `--ledger-path`, `--ledger-address`).
+
+Ledger troubleshooting:
+- If Ledger transport fails due to native deps not being built, run `pnpm approve-builds` and then `pnpm install`.
+
+Common env vars:
+- `SYMB_RPC_URL`
+- `SYMB_PRIVATE_KEY`
+- `SYMB_ADDRESSES_JSON` (JSON object with deployed addresses overrides)
+
+### Legacy Python CLI
+
+```bash
+pip3 install -r requirements.txt
+python3 symb.py --help
+```
 
 ```
 $ python3 symb.py

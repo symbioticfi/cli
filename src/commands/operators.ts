@@ -1,0 +1,239 @@
+import type { Command } from 'commander'
+import { formatUnits } from 'viem'
+
+import type { CliContext } from '../cli/context'
+import { parseAddress } from '../cli/parse'
+import { runCliAction } from '../cli/run'
+import { SUBNETWORK_IDS } from '../core/constants'
+import { printIndented, printJson, printLine } from '../core/output'
+import { encodeSubnetwork } from '../core/subnetwork'
+import { formatTokenAmount } from '../core/units'
+
+function percentString(numerator: bigint, denominator: bigint) {
+  if (denominator === 0n) return '0'
+  const bp = (numerator * 10_000n) / denominator // basis points
+  const whole = bp / 100n
+  const frac = (bp % 100n).toString().padStart(2, '0')
+  return `${whole}.${frac}`
+}
+
+function groupByCollateral<T extends { collateral: string }>(items: T[]) {
+  const out = new Map<string, T[]>()
+  for (const item of items) {
+    const list = out.get(item.collateral) ?? []
+    list.push(item)
+    out.set(item.collateral, list)
+  }
+  return out
+}
+
+export function registerOperatorReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
+  program
+    .command('isop')
+    .description('Check if address is operator.')
+    .argument('<address>', 'an address to check')
+    .action((address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const isOp = await ctx.symb.isOp(parseAddress(address))
+        if (ctx.json) return printJson({ isOp })
+        printLine(String(isOp))
+      }),
+    )
+
+  program
+    .command('ops')
+    .description('List all operators.')
+    .action(() =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const ops = await ctx.symb.getOps()
+        if (ctx.json) return printJson({ operators: ops })
+
+        printLine(`All operators [${ops.length} total]:`)
+        for (const op of ops) printIndented(`Operator: ${op}`, 2)
+      }),
+    )
+
+  program
+    .command('op-vault-net-stake')
+    .description("Get operator stake in vault for network (includes shares for NetworkRestakeDelegator).")
+    .argument('<operator_address>', 'operator address')
+    .argument('<vault_address>', 'vault address')
+    .argument('<network_address>', 'network address')
+    .action((operatorAddress, vaultAddress, networkAddress) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const op = parseAddress(operatorAddress)
+        const vault = parseAddress(vaultAddress)
+        const net = parseAddress(networkAddress)
+
+        const delegator = await ctx.symb.getVaultDelegator(vault)
+        const delegatorType = await ctx.symb.getEntityType(delegator)
+        const collateral = await ctx.symb.getVaultCollateral(vault)
+        const tokenMeta = await ctx.symb.getTokenMeta(collateral)
+
+        if (ctx.json) {
+          const perSubnet = []
+          for (const subnetId of SUBNETWORK_IDS) {
+            const subnetwork = encodeSubnetwork({ net, subnetId })
+            const stake = await ctx.symb.getStake(vault, subnetwork, op)
+
+            let shares: { operatorNetworkShares: bigint; totalOperatorNetworkShares: bigint; percent: string } | undefined
+            if (delegatorType === 0n) {
+              const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
+              const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
+              shares = {
+                operatorNetworkShares,
+                totalOperatorNetworkShares,
+                percent: percentString(operatorNetworkShares, totalOperatorNetworkShares),
+              }
+            }
+
+            perSubnet.push({ subnetId, subnetwork, stake, stakeFormatted: formatTokenAmount(stake, tokenMeta), shares })
+          }
+          return printJson({ operator: op, vault, network: net, collateral, tokenMeta, delegator, delegatorType, perSubnet })
+        }
+
+        printLine(`Operator stake in vault = ${vault}`)
+        printLine('')
+
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const stake = await ctx.symb.getStake(vault, subnetwork, op)
+          const stakeNormalized = formatTokenAmount(stake, tokenMeta)
+
+          if (delegatorType === 0n) {
+            const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
+            const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
+            const percent = percentString(operatorNetworkShares, totalOperatorNetworkShares)
+            printLine(
+              `for subnetwork = ${subnetwork} is ${stakeNormalized} ${tokenMeta.symbol}\nwhich is ${percent}% (${operatorNetworkShares} / ${totalOperatorNetworkShares} in shares) of network stake`,
+            )
+          } else {
+            printLine(`for subnetwork = ${subnetwork} is ${stakeNormalized} ${tokenMeta.symbol}`)
+          }
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('opnets')
+    .description('List all networks where operator is opted in.')
+    .argument('<operator_address>', 'operator address')
+    .action((operatorAddress) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const op = parseAddress(operatorAddress)
+        const nets = await ctx.symb.getOpNets(op)
+        if (ctx.json) return printJson({ operator: op, networks: nets.map((n) => n.net) })
+
+        printLine(`Operator: ${op}`)
+        printLine(`Networks [${nets.length} total]:`)
+        for (const net of nets) printLine(`  Network: ${net.net}`)
+      }),
+    )
+
+  program
+    .command('opstakes')
+    .description('Show operator stakes in all networks.')
+    .argument('<operator_address>', 'operator address')
+    .action((operatorAddress) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const op = parseAddress(operatorAddress)
+        const netsVaults = await ctx.symb.getOpNetsVaults(op)
+
+        if (ctx.json) return printJson({ operator: op, networks: netsVaults })
+
+        printLine(`Operator: ${op}`)
+        printLine(`Networks [${netsVaults.length} total]:`)
+
+        const totalStakes = new Map<string, bigint>()
+
+        for (const net of netsVaults) {
+          printIndented(`Network: ${net.net}`, 2)
+
+          const byCollateral = groupByCollateral(net.vaults)
+          let totalNetStakeStr = ''
+
+          for (const [collateral, vaults] of byCollateral.entries()) {
+            const meta = await ctx.symb.getTokenMeta(parseAddress(collateral))
+            printIndented(`Collateral: ${collateral} (${meta.symbol})`, 4)
+
+            let stakesSum = 0n
+            for (const vault of vaults) {
+              printIndented(`Vault: ${vault.vault}`, 6)
+              printIndented(
+                `Type: ${ctx.symb.delegatorTypeName(vault.delegatorType)} / ${ctx.symb.slasherTypeName(vault.slasherType)}`,
+                8,
+              )
+              const stake = Object.values(vault.stake).reduce((a, b) => a + b, 0n)
+              printIndented(`Stake: ${formatTokenAmount(stake, meta)}`, 8)
+              stakesSum += stake
+            }
+
+            totalNetStakeStr += `${formatTokenAmount(stakesSum, meta)} ${meta.symbol} + `
+            totalStakes.set(collateral, (totalStakes.get(collateral) ?? 0n) + stakesSum)
+          }
+
+          if (totalNetStakeStr) {
+            printIndented(`Total stake: ${totalNetStakeStr.slice(0, -3)}`, 4)
+          } else {
+            printIndented('Total stake: 0', 4)
+          }
+          printLine('')
+        }
+
+        printLine('Total stakes:')
+        for (const [collateral, stake] of totalStakes.entries()) {
+          const meta = await ctx.symb.getTokenMeta(parseAddress(collateral))
+          printIndented(`Collateral ${collateral} (${meta.symbol}): ${formatUnits(stake, meta.decimals)}`, 2)
+        }
+      }),
+    )
+
+  program
+    .command('check-opt-in-vault')
+    .description('Check if operator is opted in to a vault.')
+    .argument('<operator_address>', 'operator address')
+    .argument('<vault_address>', 'vault address')
+    .action((operatorAddress, vaultAddress) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const op = parseAddress(operatorAddress)
+        const vault = parseAddress(vaultAddress)
+        const opted = await ctx.symb.isOptedInVault(op, vault)
+        if (ctx.json) return printJson({ operator: op, vault, optedIn: opted })
+
+        printLine(
+          opted
+            ? `Operator = ${op} IS opted in to vault = ${vault}`
+            : `Operator = ${op} IS NOT opted in to vault = ${vault}`,
+        )
+      }),
+    )
+
+  program
+    .command('check-opt-in-network')
+    .description('Check if operator is opted in to a network.')
+    .argument('<operator_address>', 'operator address')
+    .argument('<network_address>', 'network address')
+    .action((operatorAddress, networkAddress) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const op = parseAddress(operatorAddress)
+        const net = parseAddress(networkAddress)
+        const opted = await ctx.symb.isOptedInNet(op, net)
+        if (ctx.json) return printJson({ operator: op, network: net, optedIn: opted })
+
+        printLine(
+          opted
+            ? `Operator = ${op} IS opted in to network = ${net}`
+            : `Operator = ${op} IS NOT opted in to network = ${net}`,
+        )
+      }),
+    )
+}
+
