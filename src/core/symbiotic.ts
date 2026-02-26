@@ -108,8 +108,47 @@ export class SymbioticClient {
   }
 
   private subnetworksForNet(net: Address): Hex[] {
+    const n = getAddress(net)
+    return SUBNETWORK_IDS.map((subnetId) => encodeSubnetwork({ net: n, subnetId }))
+  }
+
+  private pinnedOperator(vault: Pick<VaultInfo, 'delegatorType' | 'delegatorOperator'>) {
+    if ((vault.delegatorType === 2n || vault.delegatorType === 3n) && vault.delegatorOperator)
+      return vault.delegatorOperator
+    return undefined
+  }
+
+  private pinnedNetwork(vault: Pick<VaultInfo, 'delegatorType' | 'delegatorNetwork'>) {
+    if (vault.delegatorType === 3n && vault.delegatorNetwork) return vault.delegatorNetwork
+    return undefined
+  }
+
+  private buildLimitCallsForNet(net: Address, vaults: readonly VaultInfo[]) {
     const network = getAddress(net)
-    return SUBNETWORK_IDS.map((subnetId) => encodeSubnetwork({ net: network, subnetId }))
+    const subnetworks = this.subnetworksForNet(network)
+
+    const calls: any[] = []
+    const eligible: VaultInfo[] = []
+
+    for (const vault of vaults) {
+      if (vault.delegator === ZERO_ADDRESS) continue
+
+      const pinnedNet = this.pinnedNetwork(vault)
+      if (pinnedNet && pinnedNet !== network) continue
+
+      const functionName = vault.delegatorType === 3n ? 'maxNetworkLimit' : 'networkLimit'
+      for (const subnetwork of subnetworks) {
+        calls.push({
+          address: vault.delegator,
+          abi: FullRestakeDelegatorAbi,
+          functionName,
+          args: [subnetwork],
+        })
+      }
+      eligible.push(vault)
+    }
+
+    return { calls, eligible }
   }
 
   private decodeStakeBySubnetwork(
@@ -130,6 +169,13 @@ export class SymbioticClient {
       }
     }
     return { stake, hasValue, nextOffset: offset }
+  }
+
+  private decodeStakeBySubnetworkHasValue(values: readonly bigint[], offset: number): boolean {
+    for (let i = 0; i < SUBNETWORK_IDS.length; i++) {
+      if ((values[offset + i] ?? 0n) > 0n) return true
+    }
+    return false
   }
 
   async getTokenMeta(token: Address): Promise<TokenMeta> {
@@ -175,7 +221,7 @@ export class SymbioticClient {
       abi: NetworkMiddlewareServiceAbi,
       address: this.requireAddress('middleware_service'),
       functionName: 'middleware',
-      args: [getAddress(net)],
+      args: [net],
     })
     return getAddress(middleware)
   }
@@ -246,28 +292,26 @@ export class SymbioticClient {
   }
 
   async getOpNets(operator: Address): Promise<NetInfo[]> {
-    const op = getAddress(operator)
     const nets = await this.getNets()
 
     const optinCalls = nets.map((net) => ({
       address: this.requireAddress('op_net_opt_in'),
       abi: OperatorNetworkOptInServiceAbi,
       functionName: 'isOptedIn',
-      args: [op, net.net],
+      args: [operator, net.net],
     }))
     const optins = await this.mc(optinCalls)
     return nets.filter((net, i) => Boolean(optins[i]))
   }
 
   async getNetOps(net: Address): Promise<Address[]> {
-    const network = getAddress(net)
     const ops = await this.getOps()
 
     const calls = ops.map((op) => ({
       address: this.requireAddress('op_net_opt_in'),
       abi: OperatorNetworkOptInServiceAbi,
       functionName: 'isOptedIn',
-      args: [op, network],
+      args: [op, net],
     }))
     const optins = await this.mc(calls)
     return ops.filter((op, i) => Boolean(optins[i]))
@@ -385,7 +429,7 @@ export class SymbioticClient {
   async getVaultDelegator(vault: Address): Promise<Address> {
     const delegator = await this.read<Address>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'delegator',
     })
     return getAddress(delegator)
@@ -394,7 +438,7 @@ export class SymbioticClient {
   async getVaultCollateral(vault: Address): Promise<Address> {
     const collateral = await this.read<Address>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'collateral',
     })
     return getAddress(collateral)
@@ -403,36 +447,15 @@ export class SymbioticClient {
   async getVaultSlasher(vault: Address): Promise<Address> {
     const slasher = await this.read<Address>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'slasher',
     })
     return getAddress(slasher)
   }
 
   async getNetVaults(net: Address): Promise<(VaultInfo & { limit: StakeBySubnetwork })[]> {
-    const network = getAddress(net)
     const vaults = await this.getVaults()
-    const eligible = vaults.filter((v) => {
-      if (v.delegator === ZERO_ADDRESS) return false
-      if (v.delegatorType === 3n && v.delegatorNetwork && v.delegatorNetwork !== network)
-        return false
-      return true
-    })
-
-    const limitCalls: any[] = []
-    const subnetworks = this.subnetworksForNet(network)
-    for (const vault of eligible) {
-      const functionName = vault.delegatorType === 3n ? 'maxNetworkLimit' : 'networkLimit'
-      for (const subnetwork of subnetworks) {
-        limitCalls.push({
-          address: vault.delegator,
-          abi: FullRestakeDelegatorAbi,
-          functionName,
-          args: [subnetwork],
-        })
-      }
-    }
-
+    const { calls: limitCalls, eligible } = this.buildLimitCallsForNet(net, vaults)
     const limits = (await this.mc(limitCalls)) as bigint[]
     const results: (VaultInfo & { limit: StakeBySubnetwork })[] = []
 
@@ -452,14 +475,58 @@ export class SymbioticClient {
       vaults: Array<VaultInfo & { limit: StakeBySubnetwork; stake: StakeBySubnetwork }>
     }>
   > {
-    const network = getAddress(net)
-    const vaults = await this.getNetVaults(network)
-    const ops = await this.getNetOps(network)
+    const vaults = await this.getNetVaults(net)
+    const ops = await this.getNetOps(net)
 
+    const subnetworks = this.subnetworksForNet(net)
+    const results = ops.map((op) => ({ op, vaults: [] as any[] }))
+    const opIndex = new Map<Address, number>()
+    for (let opIdx = 0; opIdx < ops.length; opIdx++) opIndex.set(ops[opIdx]!, opIdx)
+
+    // Pass 1: Determine which operators are opted into each vault (bounded by ops opted into network).
+    const candidateOpIndexesByVault: number[][] = Array.from({ length: vaults.length }, () => [])
+    const optinCalls: any[] = []
+    const optinPairs: Array<{ vaultIdx: number; opIdx: number }> = []
+
+    for (let vaultIdx = 0; vaultIdx < vaults.length; vaultIdx++) {
+      const vault = vaults[vaultIdx]!
+      const pinnedOp = this.pinnedOperator(vault)
+      if (pinnedOp) {
+        const idx = opIndex.get(pinnedOp)
+        if (idx !== undefined) candidateOpIndexesByVault[vaultIdx]!.push(idx)
+        continue
+      }
+
+      for (let opIdx = 0; opIdx < ops.length; opIdx++) {
+        optinCalls.push({
+          address: this.requireAddress('op_vault_opt_in'),
+          abi: OperatorVaultOptInServiceAbi,
+          functionName: 'isOptedIn',
+          args: [ops[opIdx]!, vault.vault],
+        })
+        optinPairs.push({ vaultIdx, opIdx })
+      }
+    }
+
+    if (optinCalls.length) {
+      const optins = await this.mc(optinCalls)
+      for (let i = 0; i < optinPairs.length; i++) {
+        if (!optins[i]) continue
+        const { vaultIdx, opIdx } = optinPairs[i]!
+        candidateOpIndexesByVault[vaultIdx]!.push(opIdx)
+      }
+    }
+
+    // Pass 2: Stake calls only for (vault, op) pairs that are opted into the vault.
     const stakeCalls: any[] = []
-    const subnetworks = this.subnetworksForNet(network)
-    for (const op of ops) {
-      for (const vault of vaults) {
+    const stakePairs: Array<{ opIdx: number; vault: VaultInfo & { limit: StakeBySubnetwork } }> =
+      []
+
+    for (let vaultIdx = 0; vaultIdx < vaults.length; vaultIdx++) {
+      const vault = vaults[vaultIdx]!
+      const opIndexes = candidateOpIndexesByVault[vaultIdx] ?? []
+      for (const opIdx of opIndexes) {
+        const op = ops[opIdx]!
         for (const subnetwork of subnetworks) {
           stakeCalls.push({
             address: vault.delegator,
@@ -468,33 +535,29 @@ export class SymbioticClient {
             args: [subnetwork, op],
           })
         }
+        stakePairs.push({ opIdx, vault })
       }
     }
 
     const stakes = (await this.mc(stakeCalls)) as bigint[]
-    const results = ops.map((op) => ({ op, vaults: [] as any[] }))
-
-    let i = 0
-    for (let opIdx = 0; opIdx < ops.length; opIdx++) {
-      for (const vault of vaults) {
-        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, i)
-        i = nextOffset
-        if (hasValue) results[opIdx]!.vaults.push({ ...vault, stake })
-      }
+    let stakeOffset = 0
+    for (const pair of stakePairs) {
+      const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, stakeOffset)
+      stakeOffset = nextOffset
+      if (hasValue) results[pair.opIdx]!.vaults.push({ ...pair.vault, stake })
     }
 
     return results
   }
 
   async getVaultOps(vault: Address): Promise<Address[]> {
-    const v = getAddress(vault)
     const ops = await this.getOps()
 
     const calls = ops.map((op) => ({
       address: this.requireAddress('op_vault_opt_in'),
       abi: OperatorVaultOptInServiceAbi,
       functionName: 'isOptedIn',
-      args: [op, v],
+      args: [op, vault],
     }))
     const optins = await this.mc(calls)
     return ops.filter((op, i) => Boolean(optins[i]))
@@ -504,14 +567,13 @@ export class SymbioticClient {
     delegator: Address,
   ): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
     const nets = await this.getNets()
-    const d = getAddress(delegator)
 
     const calls: any[] = []
     for (const net of nets) {
       const subnetworks = this.subnetworksForNet(net.net)
       for (const subnetwork of subnetworks) {
         calls.push({
-          address: d,
+          address: delegator,
           abi: FullRestakeDelegatorAbi,
           functionName: 'maxNetworkLimit',
           args: [subnetwork],
@@ -532,15 +594,13 @@ export class SymbioticClient {
   }
 
   async getVaultNets(vault: Address): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
-    const v = getAddress(vault)
-    const delegator = await this.getVaultDelegator(v)
+    const delegator = await this.getVaultDelegator(vault)
     return this.getVaultNetsByDelegator(delegator)
   }
 
   async getVaultNetsOps(vault: Address): Promise<Record<Address, Address[]>> {
-    const v = getAddress(vault)
-    const vaultOps = await this.getVaultOps(v)
-    const vaultNets = await this.getVaultNets(v)
+    const vaultOps = await this.getVaultOps(vault)
+    const vaultNets = await this.getVaultNets(vault)
 
     const calls: any[] = []
     const pairs: Array<{ net: Address; op: Address }> = []
@@ -568,37 +628,174 @@ export class SymbioticClient {
   async getVaultNetsOpsFull(
     vaultInfo: VaultInfo,
   ): Promise<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>> {
-    const nets = await this.getVaultNetsByDelegator(vaultInfo.delegator)
-    const ops = await this.getVaultOps(vaultInfo.vault)
+    const res = await this.getVaultsNetsOpsFull([vaultInfo])
+    return res[0] ?? []
+  }
 
-    const calls: any[] = []
-    for (const net of nets) {
-      const subnetworks = this.subnetworksForNet(net.net)
-      for (const op of ops) {
+  async getVaultsNetsOpsFull(
+    vaultInfos: readonly VaultInfo[],
+  ): Promise<Array<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>>> {
+    if (vaultInfos.length === 0) return []
+
+    const nets = await this.getNets()
+    const ops = await this.getOps()
+
+    // Precompute subnetworks once per net; used by both limit and stake call builders.
+    const subnetworksByNet = new Map<Address, Hex[]>()
+    for (const net of nets) subnetworksByNet.set(net.net, this.subnetworksForNet(net.net))
+    const getSubnetworks = (net: Address) => {
+      const cached = subnetworksByNet.get(net)
+      if (cached) return cached
+      const subnetworks = this.subnetworksForNet(net)
+      subnetworksByNet.set(net, subnetworks)
+      return subnetworks
+    }
+
+    // Pass 1: Determine which networks are relevant for each vault by reading maxNetworkLimit.
+    const limitCalls: any[] = []
+    const candidateNetsByVault: Address[][] = new Array(vaultInfos.length)
+    for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
+      const v = vaultInfos[vIdx]!
+      if (v.delegator === ZERO_ADDRESS) {
+        candidateNetsByVault[vIdx] = []
+        continue
+      }
+
+      // OperatorNetworkSpecific delegators are bound to a single network.
+      const pinnedNet = this.pinnedNetwork(v)
+      if (pinnedNet) {
+        candidateNetsByVault[vIdx] = [pinnedNet]
+      } else {
+        candidateNetsByVault[vIdx] = nets.map((n) => n.net)
+      }
+    }
+
+    for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
+      const v = vaultInfos[vIdx]!
+      if (v.delegator === ZERO_ADDRESS) continue
+      const candidateNets = candidateNetsByVault[vIdx] ?? []
+      for (const net of candidateNets) {
+        const subnetworks = getSubnetworks(net)
         for (const subnetwork of subnetworks) {
-          calls.push({
-            address: vaultInfo.delegator,
-            abi: NetworkRestakeDelegatorAbi,
-            functionName: 'stake',
-            args: [subnetwork, op],
+          limitCalls.push({
+            address: v.delegator,
+            abi: FullRestakeDelegatorAbi,
+            functionName: 'maxNetworkLimit',
+            args: [subnetwork],
           })
         }
       }
     }
 
-    const stakes = (await this.mc(calls)) as bigint[]
-    const out = nets.map((n) => ({
-      net: n.net,
-      ops: [] as Array<{ op: Address; stake: StakeBySubnetwork }>,
-    }))
+    const limitResults = (await this.mc(limitCalls)) as bigint[]
+    const netsByVault: Address[][] = new Array(vaultInfos.length)
+    let limitOffset = 0
 
-    let i = 0
-    for (let netIdx = 0; netIdx < nets.length; netIdx++) {
-      for (const op of ops) {
-        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, i)
-        i = nextOffset
-        if (hasValue) out[netIdx]!.ops.push({ op, stake })
+    for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
+      if (vaultInfos[vIdx]!.delegator === ZERO_ADDRESS) {
+        netsByVault[vIdx] = []
+        continue
       }
+
+      const selected: Address[] = []
+      const candidateNets = candidateNetsByVault[vIdx] ?? []
+      for (const net of candidateNets) {
+        const hasValue = this.decodeStakeBySubnetworkHasValue(limitResults, limitOffset)
+        limitOffset += SUBNETWORK_IDS.length
+        if (hasValue) selected.push(net)
+      }
+      netsByVault[vIdx] = selected
+    }
+
+    // Pass 2: Determine which operators are opted into each vault.
+    const opsByVault: Address[][] = new Array(vaultInfos.length)
+    const optinCalls: any[] = []
+    const optinVaultIndexes: number[] = []
+
+    for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
+      // No nets, no stakes, no point checking operators.
+      if ((netsByVault[vIdx] ?? []).length === 0) {
+        opsByVault[vIdx] = []
+        continue
+      }
+
+      const v = vaultInfos[vIdx]!
+
+      // Operator-specific delegators already constrain the operator set on-chain.
+      const pinnedOp = this.pinnedOperator(v)
+      if (pinnedOp) {
+        opsByVault[vIdx] = [pinnedOp]
+        continue
+      }
+
+      optinVaultIndexes.push(vIdx)
+      for (const op of ops) {
+        optinCalls.push({
+          address: this.requireAddress('op_vault_opt_in'),
+          abi: OperatorVaultOptInServiceAbi,
+          functionName: 'isOptedIn',
+          args: [op, v.vault],
+        })
+      }
+    }
+
+    const optins = await this.mc(optinCalls)
+    let optinOffset = 0
+    for (const vIdx of optinVaultIndexes) {
+      const selected: Address[] = []
+      for (let opIdx = 0; opIdx < ops.length; opIdx++) {
+        if (optins[optinOffset++]) selected.push(ops[opIdx]!)
+      }
+      opsByVault[vIdx] = selected
+    }
+
+    // Pass 3: Stake lookups (net -> op -> subnetwork) for opted-in operators only.
+    const stakeCalls: any[] = []
+    for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
+      const v = vaultInfos[vIdx]!
+      if (v.delegator === ZERO_ADDRESS) continue
+
+      const vaultNets = netsByVault[vIdx] ?? []
+      const vaultOps = opsByVault[vIdx] ?? []
+      for (const net of vaultNets) {
+        const subnetworks = getSubnetworks(net)
+        for (const op of vaultOps) {
+          for (const subnetwork of subnetworks) {
+            stakeCalls.push({
+              address: v.delegator,
+              abi: NetworkRestakeDelegatorAbi,
+              functionName: 'stake',
+              args: [subnetwork, op],
+            })
+          }
+        }
+      }
+    }
+
+    const stakes = (await this.mc(stakeCalls)) as bigint[]
+
+    const out: Array<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>> =
+      new Array(vaultInfos.length)
+
+    let stakeOffset = 0
+    for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
+      const vaultNets = netsByVault[vIdx] ?? []
+      const vaultOps = opsByVault[vIdx] ?? []
+
+      const vaultOut = vaultNets.map((net) => ({
+        net,
+        ops: [] as Array<{ op: Address; stake: StakeBySubnetwork }>,
+      }))
+
+      for (let netIdx = 0; netIdx < vaultNets.length; netIdx++) {
+        for (const op of vaultOps) {
+          const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, stakeOffset)
+          stakeOffset = nextOffset
+          if (hasValue) vaultOut[netIdx]!.ops.push({ op, stake })
+        }
+      }
+
+      out[vIdx] = vaultOut
     }
 
     return out
@@ -610,39 +807,107 @@ export class SymbioticClient {
       vaults: Array<VaultInfo & { limit: StakeBySubnetwork; stake: StakeBySubnetwork }>
     }>
   > {
-    const operator = getAddress(op)
-    const nets = await this.getOpNets(operator)
+    const nets = await this.getOpNets(op)
+    const out = nets.map((n) => ({ net: n.net, vaults: [] as any[] }))
+    if (nets.length === 0) return out
 
-    // Avoid re-fetching vault list per-network by letting getNetVaults use the cached vault list.
-    const netVaults = new Map<Address, Awaited<ReturnType<SymbioticClient['getNetVaults']>>>()
+    // Pre-filter the vault universe to the operator's opted-in vaults (plus any pinned-to-operator vaults)
+    // before doing per-network limit scans. This avoids scanning all vaults for each network.
+    const allVaults = await this.getVaults()
+
+    const genericVaults: VaultInfo[] = []
+    for (const vault of allVaults) {
+      if (vault.delegator === ZERO_ADDRESS) continue
+
+      const pinnedOp = this.pinnedOperator(vault)
+      if (pinnedOp && pinnedOp !== op) continue
+      if (!pinnedOp) genericVaults.push(vault)
+    }
+
+    const optinCalls = genericVaults.map((vault) => ({
+      address: this.requireAddress('op_vault_opt_in'),
+      abi: OperatorVaultOptInServiceAbi,
+      functionName: 'isOptedIn',
+      args: [op, vault.vault],
+    }))
+    const optins = optinCalls.length ? await this.mc(optinCalls) : []
+
+    const optedGenericVaults = new Set<Address>()
+    for (let i = 0; i < genericVaults.length; i++) {
+      if (optins[i]) optedGenericVaults.add(genericVaults[i]!.vault)
+    }
+
+    const vaultsForOp: VaultInfo[] = []
+    for (const vault of allVaults) {
+      if (vault.delegator === ZERO_ADDRESS) continue
+
+      const pinnedOp = this.pinnedOperator(vault)
+      if (pinnedOp && pinnedOp !== op) continue
+      if (pinnedOp === op || optedGenericVaults.has(vault.vault)) vaultsForOp.push(vault)
+    }
+
+    // Pass 1: For each net, find vaults with non-zero limit (using the op-filtered vault set).
+    const limitCalls: any[] = []
+    const eligibleVaultsByNet: VaultInfo[][] = new Array(nets.length)
+
+    for (let netIdx = 0; netIdx < nets.length; netIdx++) {
+      const net = nets[netIdx]!.net
+      const { calls, eligible } = this.buildLimitCallsForNet(net, vaultsForOp)
+      eligibleVaultsByNet[netIdx] = eligible
+      limitCalls.push(...calls)
+    }
+
+    const limitResults = (await this.mc(limitCalls)) as bigint[]
+    const vaultsWithLimitByNet: Array<Array<VaultInfo & { limit: StakeBySubnetwork }>> = nets.map(
+      () => [],
+    )
+
+    let limitOffset = 0
+    for (let netIdx = 0; netIdx < nets.length; netIdx++) {
+      const eligible = eligibleVaultsByNet[netIdx] ?? []
+      for (const vault of eligible) {
+        const { stake: limit, hasValue, nextOffset } = this.decodeStakeBySubnetwork(
+          limitResults,
+          limitOffset,
+        )
+        limitOffset = nextOffset
+        if (hasValue) vaultsWithLimitByNet[netIdx]!.push({ ...vault, limit })
+      }
+    }
+
+    // Pass 2: Stake lookups (net -> vault -> subnetwork) for vaults that have limits in that net.
     const stakeCalls: any[] = []
+    const stakeVaultsByNet: Array<Array<VaultInfo & { limit: StakeBySubnetwork }>> = nets.map(
+      () => [],
+    )
 
-    for (const net of nets) {
-      const vaults = await this.getNetVaults(net.net)
-      netVaults.set(net.net, vaults)
-      const subnetworks = this.subnetworksForNet(net.net)
-      for (const vault of vaults) {
+    for (let netIdx = 0; netIdx < nets.length; netIdx++) {
+      const net = nets[netIdx]!.net
+      const subnetworks = this.subnetworksForNet(net)
+      for (const vault of vaultsWithLimitByNet[netIdx] ?? []) {
         for (const subnetwork of subnetworks) {
           stakeCalls.push({
             address: vault.delegator,
             abi: NetworkRestakeDelegatorAbi,
             functionName: 'stake',
-            args: [subnetwork, operator],
+            args: [subnetwork, op],
           })
         }
+        stakeVaultsByNet[netIdx]!.push(vault)
       }
     }
 
-    const stakes = (await this.mc(stakeCalls)) as bigint[]
-    const out = nets.map((n) => ({ net: n.net, vaults: [] as any[] }))
+    const stakeResults = (await this.mc(stakeCalls)) as bigint[]
+    let stakeOffset = 0
 
-    let i = 0
     for (let netIdx = 0; netIdx < nets.length; netIdx++) {
-      const netAddr = nets[netIdx]!.net
-      const vaults = netVaults.get(netAddr) ?? []
-      for (const vault of vaults) {
-        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, i)
-        i = nextOffset
+      const stakeVaults = stakeVaultsByNet[netIdx] ?? []
+      for (const vault of stakeVaults) {
+        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(
+          stakeResults,
+          stakeOffset,
+        )
+        stakeOffset = nextOffset
         if (hasValue) out[netIdx]!.vaults.push({ ...vault, stake })
       }
     }
@@ -651,59 +916,64 @@ export class SymbioticClient {
   }
 
   async isNet(address: Address): Promise<boolean> {
-    const isNet = await this.read<boolean>({
-      abi: NetworkRegistryAbi,
-      address: this.requireAddress('net_registry'),
-      functionName: 'isEntity',
-      args: [getAddress(address)],
-    })
-    return Boolean(isNet)
+    return Boolean(
+      await this.read<boolean>({
+        abi: NetworkRegistryAbi,
+        address: this.requireAddress('net_registry'),
+        functionName: 'isEntity',
+        args: [address],
+      }),
+    )
   }
 
   async isOp(address: Address): Promise<boolean> {
-    const isOp = await this.read<boolean>({
-      abi: OperatorRegistryAbi,
-      address: this.requireAddress('op_registry'),
-      functionName: 'isEntity',
-      args: [getAddress(address)],
-    })
-    return Boolean(isOp)
+    return Boolean(
+      await this.read<boolean>({
+        abi: OperatorRegistryAbi,
+        address: this.requireAddress('op_registry'),
+        functionName: 'isEntity',
+        args: [address],
+      }),
+    )
   }
 
   async isVault(address: Address): Promise<boolean> {
-    const isVault = await this.read<boolean>({
-      abi: VaultFactoryAbi,
-      address: this.requireAddress('vault_factory'),
-      functionName: 'isEntity',
-      args: [getAddress(address)],
-    })
-    return Boolean(isVault)
+    return Boolean(
+      await this.read<boolean>({
+        abi: VaultFactoryAbi,
+        address: this.requireAddress('vault_factory'),
+        functionName: 'isEntity',
+        args: [address],
+      }),
+    )
   }
 
   async isOptedInVault(operator: Address, vault: Address): Promise<boolean> {
-    const res = await this.read<boolean>({
-      abi: OperatorVaultOptInServiceAbi,
-      address: this.requireAddress('op_vault_opt_in'),
-      functionName: 'isOptedIn',
-      args: [getAddress(operator), getAddress(vault)],
-    })
-    return Boolean(res)
+    return Boolean(
+      await this.read<boolean>({
+        abi: OperatorVaultOptInServiceAbi,
+        address: this.requireAddress('op_vault_opt_in'),
+        functionName: 'isOptedIn',
+        args: [operator, vault],
+      }),
+    )
   }
 
   async isOptedInNet(operator: Address, net: Address): Promise<boolean> {
-    const res = await this.read<boolean>({
-      abi: OperatorNetworkOptInServiceAbi,
-      address: this.requireAddress('op_net_opt_in'),
-      functionName: 'isOptedIn',
-      args: [getAddress(operator), getAddress(net)],
-    })
-    return Boolean(res)
+    return Boolean(
+      await this.read<boolean>({
+        abi: OperatorNetworkOptInServiceAbi,
+        address: this.requireAddress('op_net_opt_in'),
+        functionName: 'isOptedIn',
+        args: [operator, net],
+      }),
+    )
   }
 
   async getEntityType(entity: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
-      address: getAddress(entity),
+      address: entity,
       functionName: 'TYPE',
     })
   }
@@ -711,7 +981,7 @@ export class SymbioticClient {
   async getResolverSetEpochDelay(slasher: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VetoSlasherAbi,
-      address: getAddress(slasher),
+      address: slasher,
       functionName: 'resolverSetEpochsDelay',
     })
   }
@@ -719,7 +989,7 @@ export class SymbioticClient {
   async getResolver(slasher: Address, subnetwork: Hex): Promise<Address> {
     const resolver = await this.read<Address>({
       abi: VetoSlasherAbi,
-      address: getAddress(slasher),
+      address: slasher,
       functionName: 'resolver',
       args: [subnetwork, '0x'],
     })
@@ -730,7 +1000,7 @@ export class SymbioticClient {
     const MAX_UINT48 = (1n << 48n) - 1n
     const resolver = await this.read<Address>({
       abi: VetoSlasherAbi,
-      address: getAddress(slasher),
+      address: slasher,
       functionName: 'resolverAt',
       args: [subnetwork, MAX_UINT48, '0x'],
     })
@@ -740,7 +1010,7 @@ export class SymbioticClient {
   async getVaultEpochDuration(vault: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'epochDuration',
     })
   }
@@ -748,7 +1018,7 @@ export class SymbioticClient {
   async getVaultCurrentEpoch(vault: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'currentEpoch',
     })
   }
@@ -756,7 +1026,7 @@ export class SymbioticClient {
   async getVaultCurrentEpochStart(vault: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'currentEpochStart',
     })
   }
@@ -764,7 +1034,7 @@ export class SymbioticClient {
   async getMaxNetworkLimit(delegator: Address, subnetwork: Hex): Promise<bigint> {
     return this.read<bigint>({
       abi: FullRestakeDelegatorAbi,
-      address: getAddress(delegator),
+      address: delegator,
       functionName: 'maxNetworkLimit',
       args: [subnetwork],
     })
@@ -773,7 +1043,7 @@ export class SymbioticClient {
   async getNetworkLimit(delegator: Address, subnetwork: Hex): Promise<bigint> {
     return this.read<bigint>({
       abi: FullRestakeDelegatorAbi,
-      address: getAddress(delegator),
+      address: delegator,
       functionName: 'networkLimit',
       args: [subnetwork],
     })
@@ -786,9 +1056,9 @@ export class SymbioticClient {
   ): Promise<bigint> {
     return this.read<bigint>({
       abi: FullRestakeDelegatorAbi,
-      address: getAddress(delegator),
+      address: delegator,
       functionName: 'operatorNetworkLimit',
-      args: [subnetwork, getAddress(operator)],
+      args: [subnetwork, operator],
     })
   }
 
@@ -799,16 +1069,16 @@ export class SymbioticClient {
   ): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
-      address: getAddress(delegator),
+      address: delegator,
       functionName: 'operatorNetworkShares',
-      args: [subnetwork, getAddress(operator)],
+      args: [subnetwork, operator],
     })
   }
 
   async getTotalOperatorNetworkShares(delegator: Address, subnetwork: Hex): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
-      address: getAddress(delegator),
+      address: delegator,
       functionName: 'totalOperatorNetworkShares',
       args: [subnetwork],
     })
@@ -821,9 +1091,9 @@ export class SymbioticClient {
   ): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
-      address: getAddress(delegator),
+      address: delegator,
       functionName: 'stake',
-      args: [subnetwork, getAddress(operator)],
+      args: [subnetwork, operator],
     })
   }
 
@@ -835,38 +1105,39 @@ export class SymbioticClient {
   async getAllowance(token: Address, owner: Address, spender: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultTokenizedAbi,
-      address: getAddress(token),
+      address: token,
       functionName: 'allowance',
-      args: [getAddress(owner), getAddress(spender)],
+      args: [owner, spender],
     })
   }
 
   async getActiveBalance(vault: Address, account: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'activeBalanceOf',
-      args: [getAddress(account)],
+      args: [account],
     })
   }
 
   async getWithdrawals(vault: Address, epoch: bigint, account: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'withdrawalsOf',
-      args: [epoch, getAddress(account)],
+      args: [epoch, account],
     })
   }
 
   async getWithdrawalsClaimed(vault: Address, epoch: bigint, account: Address): Promise<boolean> {
-    const res = await this.read<boolean>({
+    return Boolean(
+      await this.read<boolean>({
       abi: VaultAbi,
-      address: getAddress(vault),
+      address: vault,
       functionName: 'isWithdrawalsClaimed',
-      args: [epoch, getAddress(account)],
-    })
-    return Boolean(res)
+      args: [epoch, account],
+      }),
+    )
   }
 
   async getOperatorNetworkOptInNonce(who: Address, where: Address): Promise<bigint> {
@@ -874,7 +1145,7 @@ export class SymbioticClient {
       abi: OperatorNetworkOptInServiceAbi,
       address: this.requireAddress('op_net_opt_in'),
       functionName: 'nonces',
-      args: [getAddress(who), getAddress(where)],
+      args: [who, where],
     })
   }
 
@@ -883,7 +1154,7 @@ export class SymbioticClient {
       abi: OperatorVaultOptInServiceAbi,
       address: this.requireAddress('op_vault_opt_in'),
       functionName: 'nonces',
-      args: [getAddress(who), getAddress(where)],
+      args: [who, where],
     })
   }
 
@@ -893,7 +1164,7 @@ export class SymbioticClient {
       abi: CuratorRegistryAbi,
       address: this.requireAddress('curator_registry'),
       functionName: 'getCurator',
-      args: [getAddress(vault)],
+      args: [vault],
     })
     return getAddress(curator)
   }
@@ -903,7 +1174,7 @@ export class SymbioticClient {
       abi: FeeRegistryAbi,
       address: this.requireAddress('fee_registry'),
       functionName: 'getOperatorsFee',
-      args: [getAddress(vault), getAddress(network)],
+      args: [vault, network],
     })
   }
 
@@ -912,7 +1183,7 @@ export class SymbioticClient {
       abi: FeeRegistryAbi,
       address: this.requireAddress('fee_registry'),
       functionName: 'getCuratorFee',
-      args: [getAddress(vault), getAddress(network)],
+      args: [vault, network],
     })
   }
 
@@ -921,7 +1192,7 @@ export class SymbioticClient {
       abi: ProtocolFeesAbi,
       address: this.requireAddress('rewards'),
       functionName: 'protocolFee',
-      args: [rewardsType, getAddress(network)],
+      args: [rewardsType, network],
     })
   }
 
@@ -930,7 +1201,7 @@ export class SymbioticClient {
       abi: VaultSnapshotRewardsAbi,
       address: this.requireAddress('rewards'),
       functionName: 'curatorFees',
-      args: [getAddress(vault), getAddress(token)],
+      args: [vault, token],
     })
   }
 
@@ -944,7 +1215,7 @@ export class SymbioticClient {
       abi: VaultSnapshotRewardsAbi,
       address: this.requireAddress('rewards'),
       functionName: 'lastUnclaimedReward',
-      args: [getAddress(account), getAddress(vault), getAddress(network), getAddress(token)],
+      args: [account, vault, network, token],
     })
   }
 
@@ -958,7 +1229,7 @@ export class SymbioticClient {
       abi: VaultSnapshotRewardsAbi,
       address: this.requireAddress('rewards'),
       functionName: 'lastUnclaimedOperatorReward',
-      args: [getAddress(account), getAddress(vault), getAddress(network), getAddress(token)],
+      args: [account, vault, network, token],
     })
   }
 

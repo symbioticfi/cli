@@ -6,6 +6,7 @@ import ora from 'ora'
 import { createViemTransport, type ResolvedClientConfig } from './client'
 import { confirmOrExit } from './confirm'
 import { printJson, printLine, type OutputMode } from './output'
+import { canUseSpinner } from './spinner'
 
 export function createWalletClientForAccount(
   resolved: ResolvedClientConfig,
@@ -59,7 +60,7 @@ export async function runWriteTx(args: {
   confirmMessage?: string
   successMessage?: string
 }): Promise<Hash | undefined> {
-  const canSpin = !args.mode.json && !args.mode.quiet
+  const canSpin = canUseSpinner(args.mode)
 
   const renderArg = (value: unknown) => {
     if (typeof value === 'bigint') return value.toString()

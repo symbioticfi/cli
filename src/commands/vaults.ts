@@ -5,6 +5,7 @@ import type { CliContext } from '../cli/context'
 import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
 import { printIndented, printJson, printLine } from '../core/output'
+import { startSpinner } from '../core/spinner'
 import { formatTokenAmount } from '../core/units'
 
 export function registerVaultReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
@@ -28,21 +29,36 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
     .action((opts: { full?: boolean }) =>
       runCliAction(async () => {
         const ctx = await getCtx()
+        const vaultsSpinner = startSpinner(ctx, 'Fetching vault list...')
         const vaults = await ctx.symb.getVaults()
+        vaultsSpinner?.stop()
 
         if (ctx.json) {
           if (!opts.full) return printJson({ vaults })
-          const full = []
-          for (const v of vaults) {
-            const vaultData = await ctx.symb.getVaultNetsOpsFull(v)
-            full.push({ ...v, full: vaultData })
-          }
-          return printJson({ vaults: full })
+
+          const vaultDatas = await ctx.symb.getVaultsNetsOpsFull(vaults)
+          return printJson({
+            vaults: vaults.map((v, i) => ({ ...v, full: vaultDatas[i] ?? [] })),
+          })
         }
 
         printLine(`All vaults [${vaults.length} total]:`)
 
-        for (const v of vaults) {
+        const fullSpinner = opts.full
+          ? startSpinner(ctx, 'Fetching full vault data (this can take a while)...')
+          : undefined
+        let vaultDatas:
+          | Awaited<ReturnType<CliContext['symb']['getVaultsNetsOpsFull']>>
+          | undefined
+        try {
+          vaultDatas = opts.full ? await ctx.symb.getVaultsNetsOpsFull(vaults) : undefined
+        } finally {
+          fullSpinner?.stop()
+        }
+
+        for (let idx = 0; idx < vaults.length; idx++) {
+          const v = vaults[idx]!
+          const vaultData = opts.full ? vaultDatas?.[idx] ?? [] : []
           printIndented(`Vault: ${v.vault}`, 2)
 
           const collateralMeta = await ctx.symb.getTokenMeta(v.collateral)
@@ -59,7 +75,6 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
           printLine('')
 
           if (opts.full) {
-            const vaultData = await ctx.symb.getVaultNetsOpsFull(v)
             const totalDelegated = vaultData
               .flatMap((n) => n.ops)
               .flatMap((o) => Object.values(o.stake))
@@ -96,7 +111,14 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const ops = await ctx.symb.getVaultOps(vaultAddress)
+        const spinner = startSpinner(ctx, 'Fetching vault operators...')
+        const ops = await (async () => {
+          try {
+            return await ctx.symb.getVaultOps(vaultAddress)
+          } finally {
+            spinner?.stop()
+          }
+        })()
         if (ctx.json) return printJson({ vault: vaultAddress, operators: ops })
 
         printLine(`Vault: ${vaultAddress}`)
@@ -112,7 +134,14 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const nets = await ctx.symb.getVaultNets(vaultAddress)
+        const spinner = startSpinner(ctx, 'Fetching vault networks...')
+        const nets = await (async () => {
+          try {
+            return await ctx.symb.getVaultNets(vaultAddress)
+          } finally {
+            spinner?.stop()
+          }
+        })()
         if (ctx.json) return printJson({ vault: vaultAddress, networks: nets })
 
         printLine(`Vault: ${vaultAddress}`)
@@ -128,7 +157,14 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const netsOps = await ctx.symb.getVaultNetsOps(vaultAddress)
+        const spinner = startSpinner(ctx, 'Fetching vault networks + operators...')
+        const netsOps = await (async () => {
+          try {
+            return await ctx.symb.getVaultNetsOps(vaultAddress)
+          } finally {
+            spinner?.stop()
+          }
+        })()
         if (ctx.json) return printJson({ vault: vaultAddress, netsOps })
 
         const entries = Object.entries(netsOps) as Array<[Address, Address[]]>

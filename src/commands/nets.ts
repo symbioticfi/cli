@@ -6,6 +6,7 @@ import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
 import { groupBy } from '../core/format'
 import { printIndented, printJson, printLine } from '../core/output'
+import { startSpinner } from '../core/spinner'
 import { formatTokenAmount } from '../core/units'
 
 export function registerNetworkReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
@@ -46,16 +47,30 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
     .action((opts: { full?: boolean }) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const nets = await ctx.symb.getNets()
+        const spinner = startSpinner(ctx, 'Fetching networks...')
+        const nets = await (async () => {
+          try {
+            return await ctx.symb.getNets()
+          } finally {
+            spinner?.stop()
+          }
+        })()
 
         if (ctx.json) {
           if (!opts.full) return printJson({ nets })
 
           const full = []
-          for (const net of nets) {
-            const opVaults = await ctx.symb.getNetOpsVaults(net.net)
-            const vaultSet = new Set(opVaults.flatMap((op) => op.vaults.map((v) => v.vault)))
-            full.push({ ...net, ops: opVaults.length, vaults: vaultSet.size })
+          const fullSpinner = startSpinner(ctx, 'Fetching full network data...')
+          try {
+            for (const net of nets) {
+              const [ops, vaults] = await Promise.all([
+                ctx.symb.getNetOps(net.net),
+                ctx.symb.getNetVaults(net.net),
+              ])
+              full.push({ ...net, ops: ops.length, vaults: vaults.length })
+            }
+          } finally {
+            fullSpinner?.stop()
           }
           return printJson({ nets: full })
         }
@@ -65,10 +80,20 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
         let fullData: Array<{ ops: number; vaults: number }> | undefined
         if (opts.full) {
           fullData = []
-          for (const net of nets) {
-            const opVaults = await ctx.symb.getNetOpsVaults(net.net)
-            const vaultSet = new Set(opVaults.flatMap((op) => op.vaults.map((v) => v.vault)))
-            fullData.push({ ops: opVaults.length, vaults: vaultSet.size })
+          const fullSpinner = startSpinner(ctx, 'Fetching full network data...')
+          try {
+            for (const net of nets) {
+              if (fullSpinner) {
+                fullSpinner.text = `Fetching full network data... (${fullData.length + 1}/${nets.length})`
+              }
+              const [ops, vaults] = await Promise.all([
+                ctx.symb.getNetOps(net.net),
+                ctx.symb.getNetVaults(net.net),
+              ])
+              fullData.push({ ops: ops.length, vaults: vaults.length })
+            }
+          } finally {
+            fullSpinner?.stop()
           }
         }
 
@@ -97,7 +122,14 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
     .action((networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const ops = await ctx.symb.getNetOps(networkAddress)
+        const spinner = startSpinner(ctx, 'Fetching network operators...')
+        const ops = await (async () => {
+          try {
+            return await ctx.symb.getNetOps(networkAddress)
+          } finally {
+            spinner?.stop()
+          }
+        })()
 
         if (ctx.json) return printJson({ network: networkAddress, operators: ops })
 
@@ -118,9 +150,17 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
     .action((networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-
-        const middleware = await ctx.symb.getMiddleware(networkAddress)
-        const opsVaults = await ctx.symb.getNetOpsVaults(networkAddress)
+        const spinner = startSpinner(ctx, 'Fetching network stakes (this can take a while)...')
+        const [middleware, opsVaults] = await (async () => {
+          try {
+            return await Promise.all([
+              ctx.symb.getMiddleware(networkAddress),
+              ctx.symb.getNetOpsVaults(networkAddress),
+            ])
+          } finally {
+            spinner?.stop()
+          }
+        })()
 
         if (ctx.json)
           return printJson({ network: networkAddress, middleware, operators: opsVaults })

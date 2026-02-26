@@ -7,6 +7,7 @@ import { runCliAction } from '../cli/run'
 import { SUBNETWORK_IDS } from '../core/constants'
 import { formatPercent, groupBy } from '../core/format'
 import { printIndented, printJson, printLine } from '../core/output'
+import { startSpinner } from '../core/spinner'
 import { encodeSubnetwork } from '../core/subnetwork'
 import { formatTokenAmount } from '../core/units'
 
@@ -30,7 +31,14 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
     .action(() =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const ops = await ctx.symb.getOps()
+        const spinner = startSpinner(ctx, 'Fetching operators...')
+        const ops = await (async () => {
+          try {
+            return await ctx.symb.getOps()
+          } finally {
+            spinner?.stop()
+          }
+        })()
         if (ctx.json) return printJson({ operators: ops })
 
         printLine(`All operators [${ops.length} total]:`)
@@ -53,49 +61,59 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
         const vault = vaultAddress
         const net = networkAddress
 
-        const delegator = await ctx.symb.getVaultDelegator(vault)
-        const delegatorType = await ctx.symb.getEntityType(delegator)
-        const collateral = await ctx.symb.getVaultCollateral(vault)
-        const tokenMeta = await ctx.symb.getTokenMeta(collateral)
+        const spinner = startSpinner(ctx, 'Fetching stake...')
+        const { delegator, delegatorType, collateral, tokenMeta, perSubnet } = await (async () => {
+          try {
+            const delegator = await ctx.symb.getVaultDelegator(vault)
+            const delegatorType = await ctx.symb.getEntityType(delegator)
+            const collateral = await ctx.symb.getVaultCollateral(vault)
+            const tokenMeta = await ctx.symb.getTokenMeta(collateral)
 
-        if (ctx.json) {
-          const perSubnet = []
-          for (const subnetId of SUBNETWORK_IDS) {
-            const subnetwork = encodeSubnetwork({ net, subnetId })
-            const stake = await ctx.symb.getStakeByDelegator(delegator, subnetwork, op)
+            const perSubnet = []
+            for (const subnetId of SUBNETWORK_IDS) {
+              const subnetwork = encodeSubnetwork({ net, subnetId })
+              const stake = await ctx.symb.getStakeByDelegator(delegator, subnetwork, op)
 
-            let shares:
-              | {
-                  operatorNetworkShares: bigint
-                  totalOperatorNetworkShares: bigint
-                  percent: string
+              let shares:
+                | {
+                    operatorNetworkShares: bigint
+                    totalOperatorNetworkShares: bigint
+                    percent: string
+                  }
+                | undefined
+              if (delegatorType === 0n) {
+                const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(
+                  delegator,
+                  subnetwork,
+                  op,
+                )
+                const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(
+                  delegator,
+                  subnetwork,
+                )
+                shares = {
+                  operatorNetworkShares,
+                  totalOperatorNetworkShares,
+                  percent: formatPercent(operatorNetworkShares, totalOperatorNetworkShares),
                 }
-              | undefined
-            if (delegatorType === 0n) {
-              const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(
-                delegator,
-                subnetwork,
-                op,
-              )
-              const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(
-                delegator,
-                subnetwork,
-              )
-              shares = {
-                operatorNetworkShares,
-                totalOperatorNetworkShares,
-                percent: formatPercent(operatorNetworkShares, totalOperatorNetworkShares),
               }
+
+              perSubnet.push({
+                subnetId,
+                subnetwork,
+                stake,
+                stakeFormatted: formatTokenAmount(stake, tokenMeta),
+                shares,
+              })
             }
 
-            perSubnet.push({
-              subnetId,
-              subnetwork,
-              stake,
-              stakeFormatted: formatTokenAmount(stake, tokenMeta),
-              shares,
-            })
+            return { delegator, delegatorType, collateral, tokenMeta, perSubnet }
+          } finally {
+            spinner?.stop()
           }
+        })()
+
+        if (ctx.json)
           return printJson({
             operator: op,
             vault,
@@ -106,32 +124,19 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
             delegatorType,
             perSubnet,
           })
-        }
 
         printLine(`Operator stake in vault = ${vault}`)
         printLine('')
 
-        for (const subnetId of SUBNETWORK_IDS) {
-          const subnetwork = encodeSubnetwork({ net, subnetId })
-          const stake = await ctx.symb.getStakeByDelegator(delegator, subnetwork, op)
-          const stakeNormalized = formatTokenAmount(stake, tokenMeta)
-
-          if (delegatorType === 0n) {
-            const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(
-              delegator,
-              subnetwork,
-              op,
-            )
-            const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(
-              delegator,
-              subnetwork,
-            )
-            const percent = formatPercent(operatorNetworkShares, totalOperatorNetworkShares)
+        for (const row of perSubnet) {
+          if (row.shares) {
             printLine(
-              `for subnetwork = ${subnetwork} is ${stakeNormalized} ${tokenMeta.symbol}\nwhich is ${percent}% (${operatorNetworkShares} / ${totalOperatorNetworkShares} in shares) of network stake`,
+              `for subnetwork = ${row.subnetwork} is ${row.stakeFormatted} ${tokenMeta.symbol}\nwhich is ${row.shares.percent}% (${row.shares.operatorNetworkShares} / ${row.shares.totalOperatorNetworkShares} in shares) of network stake`,
             )
           } else {
-            printLine(`for subnetwork = ${subnetwork} is ${stakeNormalized} ${tokenMeta.symbol}`)
+            printLine(
+              `for subnetwork = ${row.subnetwork} is ${row.stakeFormatted} ${tokenMeta.symbol}`,
+            )
           }
           printLine('')
         }
@@ -146,7 +151,14 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
       runCliAction(async () => {
         const ctx = await getCtx()
         const op = operatorAddress
-        const nets = await ctx.symb.getOpNets(op)
+        const spinner = startSpinner(ctx, 'Fetching operator networks...')
+        const nets = await (async () => {
+          try {
+            return await ctx.symb.getOpNets(op)
+          } finally {
+            spinner?.stop()
+          }
+        })()
         if (ctx.json) return printJson({ operator: op, networks: nets.map((n) => n.net) })
 
         printLine(`Operator: ${op}`)
@@ -163,7 +175,14 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
       runCliAction(async () => {
         const ctx = await getCtx()
         const op = operatorAddress
-        const netsVaults = await ctx.symb.getOpNetsVaults(op)
+        const spinner = startSpinner(ctx, 'Fetching operator stakes (this can take a while)...')
+        const netsVaults = await (async () => {
+          try {
+            return await ctx.symb.getOpNetsVaults(op)
+          } finally {
+            spinner?.stop()
+          }
+        })()
 
         if (ctx.json) return printJson({ operator: op, networks: netsVaults })
 

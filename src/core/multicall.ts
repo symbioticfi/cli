@@ -40,7 +40,7 @@ export async function multicallChunked(
   opts: MulticallChunkedOptions = {},
 ): Promise<any[]> {
   const allowFailure = opts.allowFailure ?? false
-  const batchSize = opts.batchSize ?? 500
+  const batchSize = opts.batchSize ?? 1000
   const concurrency = opts.concurrency ?? 4
 
   if (contracts.length === 0) return []
