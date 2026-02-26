@@ -317,6 +317,66 @@ export class SymbioticClient {
     return ops.filter((op, i) => Boolean(optins[i]))
   }
 
+  async getNetsFullCounts(
+    nets?: readonly NetInfo[],
+  ): Promise<Array<{ ops: number; vaults: number }>> {
+    const netsList = nets ?? (await this.getNets())
+    const ops = await this.getOps()
+    const vaults = await this.getVaults()
+
+    // Operators per net (N * O) but done as a single chunked multicall.
+    const optinCalls: any[] = []
+    for (const net of netsList) {
+      for (const op of ops) {
+        optinCalls.push({
+          address: this.requireAddress('op_net_opt_in'),
+          abi: OperatorNetworkOptInServiceAbi,
+          functionName: 'isOptedIn',
+          args: [op, net.net],
+        })
+      }
+    }
+
+    const optins = optinCalls.length ? await this.mc(optinCalls) : []
+    const opsCounts: number[] = new Array(netsList.length).fill(0)
+
+    if (ops.length) {
+      for (let netIdx = 0; netIdx < netsList.length; netIdx++) {
+        let count = 0
+        const base = netIdx * ops.length
+        for (let opIdx = 0; opIdx < ops.length; opIdx++) {
+          if (optins[base + opIdx]) count++
+        }
+        opsCounts[netIdx] = count
+      }
+    }
+
+    // Vaults per net: count vaults with at least one non-zero network limit for any subnetwork.
+    const limitCalls: any[] = []
+    const eligibleVaultsByNet: VaultInfo[][] = new Array(netsList.length)
+    for (let netIdx = 0; netIdx < netsList.length; netIdx++) {
+      const { calls, eligible } = this.buildLimitCallsForNet(netsList[netIdx]!.net, vaults)
+      eligibleVaultsByNet[netIdx] = eligible
+      limitCalls.push(...calls)
+    }
+
+    const limits = (await this.mc(limitCalls)) as bigint[]
+    const vaultCounts: number[] = new Array(netsList.length).fill(0)
+
+    let offset = 0
+    for (let netIdx = 0; netIdx < netsList.length; netIdx++) {
+      const eligible = eligibleVaultsByNet[netIdx] ?? []
+      for (let vIdx = 0; vIdx < eligible.length; vIdx++) {
+        if (this.decodeStakeBySubnetworkHasValue(limits, offset)) {
+          vaultCounts[netIdx] = (vaultCounts[netIdx] ?? 0) + 1
+        }
+        offset += SUBNETWORK_IDS.length
+      }
+    }
+
+    return netsList.map((_n, i) => ({ ops: opsCounts[i] ?? 0, vaults: vaultCounts[i] ?? 0 }))
+  }
+
   async getVaults(): Promise<VaultInfo[]> {
     const cached = this.vaultsCache.get('vaults')
     if (cached) return cached

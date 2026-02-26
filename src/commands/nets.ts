@@ -59,39 +59,26 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
         if (ctx.json) {
           if (!opts.full) return printJson({ nets })
 
-          const full = []
-          const fullSpinner = startSpinner(ctx, 'Fetching full network data...')
-          try {
-            for (const net of nets) {
-              const [ops, vaults] = await Promise.all([
-                ctx.symb.getNetOps(net.net),
-                ctx.symb.getNetVaults(net.net),
-              ])
-              full.push({ ...net, ops: ops.length, vaults: vaults.length })
-            }
-          } finally {
-            fullSpinner?.stop()
-          }
-          return printJson({ nets: full })
+          const counts = await ctx.symb.getNetsFullCounts(nets)
+          return printJson({
+            nets: nets.map((net, i) => ({
+              ...net,
+              ops: counts[i]?.ops ?? 0,
+              vaults: counts[i]?.vaults ?? 0,
+            })),
+          })
         }
 
         printLine(`All networks [${nets.length} total]:`)
 
         let fullData: Array<{ ops: number; vaults: number }> | undefined
         if (opts.full) {
-          fullData = []
-          const fullSpinner = startSpinner(ctx, 'Fetching full network data...')
+          const fullSpinner = startSpinner(
+            ctx,
+            'Fetching full network data (this can take a while)...',
+          )
           try {
-            for (const net of nets) {
-              if (fullSpinner) {
-                fullSpinner.text = `Fetching full network data... (${fullData.length + 1}/${nets.length})`
-              }
-              const [ops, vaults] = await Promise.all([
-                ctx.symb.getNetOps(net.net),
-                ctx.symb.getNetVaults(net.net),
-              ])
-              fullData.push({ ops: ops.length, vaults: vaults.length })
-            }
+            fullData = await ctx.symb.getNetsFullCounts(nets)
           } finally {
             fullSpinner?.stop()
           }

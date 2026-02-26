@@ -221,6 +221,68 @@ describe('SymbioticClient (call building + StakeBySubnetwork decoding)', () => {
     ).toBe(false)
   })
 
+  it('getNetsFullCounts batches ops opt-ins + vault limits for all nets', async () => {
+    const netA = a('0x1000000000000000000000000000000000000000')
+    const netB = a('0x2000000000000000000000000000000000000000')
+
+    const op1 = a('0x9000000000000000000000000000000000000001')
+    const op2 = a('0x9000000000000000000000000000000000000002')
+
+    const vault1 = makeVault({
+      vault: a('0x0100000000000000000000000000000000000000'),
+      delegator: a('0x1111111111111111111111111111111111111111'),
+      delegatorType: 0n,
+    })
+    const vault2 = makeVault({
+      vault: a('0x0200000000000000000000000000000000000000'),
+      delegator: a('0x2222222222222222222222222222222222222222'),
+      delegatorType: 3n,
+      delegatorNetwork: netB,
+    })
+
+    const nets = [
+      { net: netA, middleware: ZERO_ADDRESS } satisfies NetInfo,
+      { net: netB, middleware: ZERO_ADDRESS } satisfies NetInfo,
+    ]
+
+    const publicClient = {
+      multicall: vi
+        .fn()
+        // ops opt-ins:
+        // netA: op1 true, op2 true
+        // netB: op1 false, op2 true
+        .mockResolvedValueOnce([true, true, false, true])
+        // limits:
+        // netA: vault1 [0,10] (selected)
+        // netB: vault1 [0,0] (skipped), vault2 [5,0] (selected)
+        .mockResolvedValueOnce([0n, 10n, 0n, 0n, 5n, 0n]),
+    }
+    const symb = makeClient(publicClient)
+    vi.spyOn(symb, 'getOps').mockResolvedValueOnce([op1, op2])
+    vi.spyOn(symb, 'getVaults').mockResolvedValueOnce([vault1, vault2])
+
+    const res = await symb.getNetsFullCounts(nets)
+    expect(res).toEqual([
+      { ops: 2, vaults: 1 },
+      { ops: 1, vaults: 1 },
+    ])
+
+    expect(publicClient.multicall).toHaveBeenCalledTimes(2)
+
+    const optinCalls = publicClient.multicall.mock.calls[0]?.[0]?.contracts as any[]
+    expect(optinCalls).toHaveLength(4)
+    expect(optinCalls.every((c) => c.functionName === 'isOptedIn')).toBe(true)
+
+    const limitCalls = publicClient.multicall.mock.calls[1]?.[0]?.contracts as any[]
+    expect(limitCalls).toHaveLength(6)
+    expect(limitCalls.slice(0, 4).every((c) => c.functionName === 'networkLimit')).toBe(true)
+    expect(limitCalls.slice(4).every((c) => c.functionName === 'maxNetworkLimit')).toBe(true)
+    // Pinned-to-netB vault should not be queried against netA.
+    expect(limitCalls.some((c) => c.address === vault2.delegator && c.functionName === 'networkLimit')).toBe(
+      false,
+    )
+  })
+
   it('getVaultNetsOpsFull decodes stakes per net/op and filters empty', async () => {
     const vault1 = makeVault({
       vault: a('0x0100000000000000000000000000000000000000'),
