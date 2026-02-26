@@ -37,7 +37,7 @@ export const OperatorNetworkSpecificDelegatorAbi =
 
 export const VetoSlasherAbi = VetoSlasherJson as unknown as Abi
 
-// RewardsV2
+// Rewards
 export const CuratorRegistryAbi = CuratorRegistryJson as unknown as Abi
 export const FeeRegistryAbi = FeeRegistryJson as unknown as Abi
 export const ProtocolFeesAbi = ProtocolFeesJson as unknown as Abi

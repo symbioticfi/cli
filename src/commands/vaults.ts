@@ -4,14 +4,16 @@ import type { Address } from 'viem'
 import type { CliContext } from '../cli/context'
 import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
+import { SUBNETWORK_IDS } from '../core/constants'
 import { printIndented, printJson, printLine } from '../core/output'
 import { startSpinner } from '../core/spinner'
+import { encodeSubnetwork } from '../core/subnetwork'
 import { formatTokenAmount } from '../core/units'
 
 export function registerVaultReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
-    .command('isvault')
-    .description('Check if address is vault.')
+    .command('is')
+    .description('Get whether address is a vault.')
     .argument('<address>', 'an address to check', parseAddressArg)
     .action((address: Address) =>
       runCliAction(async () => {
@@ -22,9 +24,9 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
       }),
     )
 
-  program
-    .command('vaults')
-    .description('List all vaults.')
+  const listCmd = program
+    .command('list')
+    .description('Get all vaults.')
     .option('--full', 'Show full data', false)
     .action((opts: { full?: boolean }) =>
       runCliAction(async () => {
@@ -104,9 +106,11 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
       }),
     )
 
+  listCmd.alias('ls')
+
   program
-    .command('vaultops')
-    .description('List all operators opted into the given vault.')
+    .command('ops')
+    .description('Get all operators opted into the given vault.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
@@ -128,8 +132,8 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
     )
 
   program
-    .command('vaultnets')
-    .description('List all networks associated with the given vault.')
+    .command('nets')
+    .description('Get all networks associated with the given vault.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
@@ -151,8 +155,8 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
     )
 
   program
-    .command('vaultnetsops')
-    .description('List all operators and their associated networks for the given vault.')
+    .command('netsops')
+    .description('Get all operators and their associated networks for the given vault.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
@@ -176,6 +180,163 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
           printIndented(`Network: ${net}`, 2)
           printIndented(`Operators [${ops.length} total]:`, 2)
           for (const op of ops) printIndented(`Operator: ${op}`, 4)
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('network-limit')
+    .description("Get a network limit at the vault's delegator.")
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+
+        const delegator = await ctx.symb.getVaultDelegator(vault)
+        const delegatorType = await ctx.symb.getEntityType(delegator)
+
+        if (![0n, 1n, 2n].includes(delegatorType)) {
+          if (ctx.json) return printJson({ error: "Delegator doesn't have such functionality." })
+          printLine("Delegator doesn't have such functionality.")
+          return
+        }
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const limit = await ctx.symb.getNetworkLimit(delegator, subnetwork)
+          results.push({ subnetId, subnetwork, networkLimit: limit })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, delegator, delegatorType, results })
+
+        printLine('')
+        for (const r of results) {
+          printLine(
+            `Network limit for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.networkLimit}`,
+          )
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('operator-network-limit')
+    .description("Get an operator-network limit at the vault's delegator.")
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .argument('<operator_address>', 'operator address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address, operatorAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+        const op = operatorAddress
+
+        const delegator = await ctx.symb.getVaultDelegator(vault)
+        const delegatorType = await ctx.symb.getEntityType(delegator)
+        if (delegatorType !== 1n) {
+          if (ctx.json) return printJson({ error: 'It is not a FullRestakeDelegator.' })
+          printLine('It is not a FullRestakeDelegator.')
+          return
+        }
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const limit = await ctx.symb.getOperatorNetworkLimit(delegator, subnetwork, op)
+          results.push({ subnetId, subnetwork, operatorNetworkLimit: limit })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, operator: op, delegator, results })
+
+        printLine('')
+        for (const r of results) {
+          printLine(
+            `Operator-network limit for subnetwork = ${r.subnetwork} and operator = ${op} at vault ${vault} is ${r.operatorNetworkLimit}`,
+          )
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('operator-network-shares')
+    .description("Get operator-network shares at the vault's delegator.")
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .argument('<operator_address>', 'operator address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address, operatorAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+        const op = operatorAddress
+
+        const delegator = await ctx.symb.getVaultDelegator(vault)
+        const delegatorType = await ctx.symb.getEntityType(delegator)
+        if (delegatorType !== 0n) {
+          if (ctx.json) return printJson({ error: 'It is not a NetworkRestakeDelegator.' })
+          printLine('It is not a NetworkRestakeDelegator.')
+          return
+        }
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const shares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
+          results.push({ subnetId, subnetwork, operatorNetworkShares: shares })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, operator: op, delegator, results })
+
+        printLine('')
+        for (const r of results) {
+          printLine(
+            `Operator-network shares for subnetwork = ${r.subnetwork} and operator = ${op} at vault ${vault} is ${r.operatorNetworkShares}`,
+          )
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('total-operator-network-shares')
+    .description("Get total operator-network shares at the vault's delegator.")
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+
+        const delegator = await ctx.symb.getVaultDelegator(vault)
+        const delegatorType = await ctx.symb.getEntityType(delegator)
+        if (delegatorType !== 0n) {
+          if (ctx.json) return printJson({ error: 'It is not a NetworkRestakeDelegator.' })
+          printLine('It is not a NetworkRestakeDelegator.')
+          return
+        }
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const shares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
+          results.push({ subnetId, subnetwork, totalOperatorNetworkShares: shares })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, delegator, results })
+
+        printLine('')
+        for (const r of results) {
+          printLine(
+            `Total operator-network shares for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.totalOperatorNetworkShares}`,
+          )
           printLine('')
         }
       }),

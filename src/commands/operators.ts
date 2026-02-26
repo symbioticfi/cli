@@ -13,8 +13,8 @@ import { formatTokenAmount } from '../core/units'
 
 export function registerOperatorReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
-    .command('isop')
-    .description('Check if address is operator.')
+    .command('is')
+    .description('Get whether address is an operator.')
     .argument('<address>', 'an address to check', parseAddressArg)
     .action((address: Address) =>
       runCliAction(async () => {
@@ -25,9 +25,9 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
       }),
     )
 
-  program
-    .command('ops')
-    .description('List all operators.')
+  const listCmd = program
+    .command('list')
+    .description('Get all operators.')
     .action(() =>
       runCliAction(async () => {
         const ctx = await getCtx()
@@ -46,8 +46,10 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
       }),
     )
 
+  listCmd.alias('ls')
+
   program
-    .command('op-vault-net-stake')
+    .command('stake')
     .description(
       'Get operator stake in vault for network (includes shares for NetworkRestakeDelegator).',
     )
@@ -144,8 +146,8 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
     )
 
   program
-    .command('opnets')
-    .description('List all networks where operator is opted in.')
+    .command('nets')
+    .description('Get all networks where operator is opted in.')
     .argument('<operator_address>', 'operator address', parseAddressArg)
     .action((operatorAddress: Address) =>
       runCliAction(async () => {
@@ -168,8 +170,8 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
     )
 
   program
-    .command('opstakes')
-    .description('Show operator stakes in all networks.')
+    .command('stakes')
+    .description('Get operator stakes in all networks.')
     .argument('<operator_address>', 'operator address', parseAddressArg)
     .action((operatorAddress: Address) =>
       runCliAction(async () => {
@@ -237,8 +239,8 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
     )
 
   program
-    .command('check-opt-in-vault')
-    .description('Check if operator is opted in to a vault.')
+    .command('opted-in-vault')
+    .description('Get whether operator is opted in to a vault.')
     .argument('<operator_address>', 'operator address', parseAddressArg)
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .action((operatorAddress: Address, vaultAddress: Address) =>
@@ -258,8 +260,8 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
     )
 
   program
-    .command('check-opt-in-network')
-    .description('Check if operator is opted in to a network.')
+    .command('opted-in-net')
+    .description('Get whether operator is opted in to a network.')
     .argument('<operator_address>', 'operator address', parseAddressArg)
     .argument('<network_address>', 'network address', parseAddressArg)
     .action((operatorAddress: Address, networkAddress: Address) =>

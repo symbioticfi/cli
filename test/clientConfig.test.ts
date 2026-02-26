@@ -1,7 +1,3 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-
 import { getAddress } from 'viem'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
@@ -34,24 +30,16 @@ describe('resolveClientConfig', () => {
     expect(cfg.rpcUrl).toBe(CHAIN_CONFIGS.mainnet.defaultRpcUrls[0])
   })
 
-  it('prefers --rpc over --provider over env', async () => {
+  it('prefers --rpc over env', async () => {
     process.env.SYMB_RPC_URL = 'https://env.example'
 
     const a = await resolveClientConfig({ chain: 'mainnet' })
     expect(a.rpcUrls).toEqual(['https://env.example'])
     expect(a.rpcUrl).toBe('https://env.example')
 
-    const b = await resolveClientConfig({ chain: 'mainnet', provider: 'https://provider.example' })
-    expect(b.rpcUrls).toEqual(['https://provider.example'])
-    expect(b.rpcUrl).toBe('https://provider.example')
-
-    const c = await resolveClientConfig({
-      chain: 'mainnet',
-      provider: 'https://provider.example',
-      rpc: 'https://rpc.example',
-    })
-    expect(c.rpcUrls).toEqual(['https://rpc.example'])
-    expect(c.rpcUrl).toBe('https://rpc.example')
+    const b = await resolveClientConfig({ chain: 'mainnet', rpc: 'https://rpc.example' })
+    expect(b.rpcUrls).toEqual(['https://rpc.example'])
+    expect(b.rpcUrl).toBe('https://rpc.example')
   })
 
   it('merges addresses override from env', async () => {
@@ -78,25 +66,6 @@ describe('resolveClientConfig', () => {
     const cfg = await resolveClientConfig({ chain: 'mainnet' })
     expect(cfg.addresses.op_registry).toBe(getAddress(override.op_registry))
     expect(cfg.addresses.net_registry).toBe(CHAIN_CONFIGS.mainnet.addresses.net_registry)
-  })
-
-  it('prefers addressesFile over SYMB_ADDRESSES_JSON', async () => {
-    process.env.SYMB_ADDRESSES_JSON = JSON.stringify({
-      op_registry: '0x5555555555555555555555555555555555555555',
-    })
-
-    const dir = await mkdtemp(join(tmpdir(), 'symb-cli-test-'))
-    const filePath = join(dir, 'addresses.json')
-    await writeFile(
-      filePath,
-      JSON.stringify({
-        op_registry: '0x6666666666666666666666666666666666666666',
-      }),
-      'utf8',
-    )
-
-    const cfg = await resolveClientConfig({ chain: 'mainnet', addressesFile: filePath })
-    expect(cfg.addresses.op_registry).toBe(getAddress('0x6666666666666666666666666666666666666666'))
   })
 
   it('throws on invalid address override', async () => {

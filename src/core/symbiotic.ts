@@ -79,7 +79,7 @@ export class SymbioticClient {
   private requireAddressValue(name: string, address: Address | undefined): Address {
     if (!address) {
       throw new Error(
-        `${name} address is not configured for chain ${this.chainKey}. Provide it via --addresses-file or SYMB_ADDRESSES_JSON.`,
+        `${name} address is not configured for chain ${this.chainKey}. Provide it via SYMB_ADDRESSES_JSON.`,
       )
     }
     return address
@@ -1218,7 +1218,7 @@ export class SymbioticClient {
     })
   }
 
-  // RewardsV2 (optional)
+  // Rewards (optional)
   async getCurator(vault: Address): Promise<Address> {
     const curator = await this.read<Address>({
       abi: CuratorRegistryAbi,

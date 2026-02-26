@@ -8,8 +8,6 @@ import type { Chain, PublicClient, Transport } from 'viem'
 export type GlobalOptions = {
   chain: string
   rpc?: string
-  provider?: string
-  addressesFile?: string
   json?: boolean
   quiet?: boolean
   batchSize?: number
@@ -37,8 +35,6 @@ export function createContextGetter(program: Command) {
       const resolved = await resolveClientConfig({
         chain: opts.chain,
         rpc: opts.rpc,
-        provider: opts.provider,
-        addressesFile: opts.addressesFile,
         timeoutMs: opts.timeoutMs,
         retries: opts.retries,
       })

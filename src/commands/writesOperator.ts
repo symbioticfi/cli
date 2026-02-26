@@ -31,7 +31,9 @@ const DEFAULT_SIG_DURATION_SECONDS = 7n * 24n * 60n * 60n
 
 export function registerOperatorWriteCommands(program: Command, getCtx: () => Promise<CliContext>) {
   withWriteOptions(
-    program.command('register-operator').description('Register the signer as an operator.'),
+    program
+      .command('register')
+      .description('Register the signer as an operator.'),
   ).action((opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
@@ -106,7 +108,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
 
   withWriteOptions(
     program
-      .command('opt-in-network')
+      .command('opt-in-net')
       .description('Opt-in to a network.')
       .argument('<network_address>', 'network address', parseAddressArg),
   ).action((net: Address, opts: WriteOptions) =>
@@ -132,7 +134,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
 
   withWriteOptions(
     program
-      .command('opt-out-network')
+      .command('opt-out-net')
       .description('Opt-out from a network.')
       .argument('<network_address>', 'network address', parseAddressArg),
   ).action((net: Address, opts: WriteOptions) =>
@@ -158,7 +160,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
 
   withSigningOptions(
     program
-      .command('opt-in-vault-signature')
+      .command('opt-in-vault-sig')
       .description('Get a signature for opt-in to a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument(
@@ -207,7 +209,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
 
   withSigningOptions(
     program
-      .command('opt-out-vault-signature')
+      .command('opt-out-vault-sig')
       .description('Get a signature for opt-out from a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument(
@@ -256,7 +258,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
 
   withSigningOptions(
     program
-      .command('opt-in-network-signature')
+      .command('opt-in-net-sig')
       .description('Get a signature for opt-in to a network.')
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument(
@@ -305,7 +307,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
 
   withSigningOptions(
     program
-      .command('opt-out-network-signature')
+      .command('opt-out-net-sig')
       .description('Get a signature for opt-out from a network.')
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument(

@@ -15,7 +15,7 @@ import { withWriteOptions, type WriteOptions } from './writeOptions'
 
 export function registerNetworkWriteCommands(program: Command, getCtx: () => Promise<CliContext>) {
   withWriteOptions(
-    program.command('register-network').description('Register the signer as a network.'),
+    program.command('register').description('Register the signer as a network.'),
   ).action((opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
@@ -38,7 +38,7 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
 
   withWriteOptions(
     program
-      .command('set-max-network-limit')
+      .command('set-max-limit')
       .description("Set a maximum network limit at the vault's delegator.")
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument(

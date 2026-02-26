@@ -1,7 +1,7 @@
 import { getAddress, type Address, type Chain } from 'viem'
-import { hoodi, mainnet } from 'viem/chains'
+import { hoodi, mainnet, sepolia } from 'viem/chains'
 
-export type ChainKey = 'mainnet' | 'hoodi'
+export type ChainKey = 'mainnet' | 'hoodi' | 'sepolia'
 
 export const CORE_ADDRESS_KEYS = [
   'op_registry',
@@ -13,15 +13,15 @@ export const CORE_ADDRESS_KEYS = [
 ] as const
 export type CoreAddressKey = (typeof CORE_ADDRESS_KEYS)[number]
 
-// RewardsV2 (optional on some chains).
-export const REWARDS_V2_ADDRESS_KEYS = ['curator_registry', 'fee_registry', 'rewards'] as const
-export type RewardsV2AddressKey = (typeof REWARDS_V2_ADDRESS_KEYS)[number]
+// Rewards (optional on some chains).
+export const REWARDS_ADDRESS_KEYS = ['curator_registry', 'fee_registry', 'rewards'] as const
+export type RewardsAddressKey = (typeof REWARDS_ADDRESS_KEYS)[number]
 
-export const ALL_ADDRESS_KEYS = [...CORE_ADDRESS_KEYS, ...REWARDS_V2_ADDRESS_KEYS] as const
+export const ALL_ADDRESS_KEYS = [...CORE_ADDRESS_KEYS, ...REWARDS_ADDRESS_KEYS] as const
 export type ChainAddressKey = (typeof ALL_ADDRESS_KEYS)[number]
 
 export type ChainAddresses = Record<CoreAddressKey, Address> &
-  Partial<Record<RewardsV2AddressKey, Address>>
+  Partial<Record<RewardsAddressKey, Address>>
 
 export type ChainConfig = {
   key: ChainKey
@@ -36,6 +36,8 @@ export const CHAIN_KEY_BY_ID: Record<string, ChainKey> = {
   '1': 'mainnet',
   hoodi: 'hoodi',
   '560048': 'hoodi',
+  sepolia: 'sepolia',
+  '11155111': 'sepolia',
 }
 
 export function resolveChainKey(input: string): ChainKey {
@@ -96,5 +98,19 @@ export const CHAIN_CONFIGS: Record<ChainKey, ChainConfig> = {
       rewards: a('0xDf39bB990e64Dfb29dDc5F9Eda9B2c06E36D8c8C'),
     },
     viemChain: hoodi,
+  },
+  sepolia: {
+    key: 'sepolia',
+    chainId: 11_155_111,
+    defaultRpcUrls: [
+      ...sepolia.rpcUrls.default.http,
+      'https://1rpc.io/sepolia',
+      'https://0xrpc.io/sep',
+      'https://ethereum-sepolia-rpc.publicnode.com',
+    ],
+    addresses: {
+      ...baseTestnetAddresses,
+    },
+    viemChain: sepolia,
   },
 }

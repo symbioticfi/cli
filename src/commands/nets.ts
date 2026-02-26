@@ -4,15 +4,17 @@ import type { Address } from 'viem'
 import type { CliContext } from '../cli/context'
 import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
+import { SUBNETWORK_IDS } from '../core/constants'
 import { groupBy } from '../core/format'
 import { printIndented, printJson, printLine } from '../core/output'
 import { startSpinner } from '../core/spinner'
+import { encodeSubnetwork } from '../core/subnetwork'
 import { formatTokenAmount } from '../core/units'
 
 export function registerNetworkReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
-    .command('isnet')
-    .description('Check if address is network.')
+    .command('is')
+    .description('Get whether address is a network.')
     .argument('<address>', 'an address to check', parseAddressArg)
     .action((address: Address) =>
       runCliAction(async () => {
@@ -40,9 +42,9 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
       }),
     )
 
-  program
-    .command('nets')
-    .description('List all networks.')
+  const listCmd = program
+    .command('list')
+    .description('Get all networks.')
     .option('--full', 'Show full data', false)
     .action((opts: { full?: boolean }) =>
       runCliAction(async () => {
@@ -98,9 +100,11 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
       }),
     )
 
+  listCmd.alias('ls')
+
   program
-    .command('netops')
-    .description('List all operators opted in network.')
+    .command('ops')
+    .description('Get all operators opted in network.')
     .argument(
       '<network_address>',
       'an address of the network to get operators for',
@@ -127,8 +131,8 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
     )
 
   program
-    .command('netstakes')
-    .description('Show stakes of all operators in network.')
+    .command('stakes')
+    .description('Get stakes of all operators in network.')
     .argument(
       '<network_address>',
       'an address of the network to get a whole stake data for',
@@ -199,6 +203,124 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
             `Collateral ${collateral} (${meta.symbol}): ${formatTokenAmount(stake, meta)}`,
             2,
           )
+        }
+      }),
+    )
+
+  program
+    .command('max-network-limit')
+    .description("Get a maximum network limit at the vault's delegator.")
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+        const delegator = await ctx.symb.getVaultDelegator(vaultAddress)
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const limit = await ctx.symb.getMaxNetworkLimit(delegator, subnetwork)
+          results.push({ subnetId, subnetwork, maxNetworkLimit: limit })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, delegator, results })
+
+        printLine('')
+        for (const r of results) {
+          printLine(
+            `Maximum network limit for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.maxNetworkLimit}`,
+          )
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('resolver')
+    .description('Get a current resolver for a subnetwork in a vault.')
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+
+        const slasher = await ctx.symb.getVaultSlasher(vault)
+        const slasherType = await ctx.symb.getEntityType(slasher)
+        if (slasherType !== 1n) {
+          if (ctx.json) return printJson({ error: 'It is not a VetoSlasher.' })
+          printLine('It is not a VetoSlasher.')
+          return
+        }
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const resolver = await ctx.symb.getResolver(slasher, subnetwork)
+          results.push({ subnetId, subnetwork, resolver })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, slasher, results })
+
+        printLine('')
+        for (const r of results) {
+          printLine(`Resolver for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.resolver}`)
+          printLine('')
+        }
+      }),
+    )
+
+  program
+    .command('pending-resolver')
+    .description('Get a pending resolver for a subnetwork in a vault.')
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
+      runCliAction(async () => {
+        const ctx = await getCtx()
+        const vault = vaultAddress
+        const net = networkAddress
+
+        const slasher = await ctx.symb.getVaultSlasher(vault)
+        const slasherType = await ctx.symb.getEntityType(slasher)
+        if (slasherType !== 1n) {
+          if (ctx.json) return printJson({ error: 'It is not a VetoSlasher.' })
+          printLine('It is not a VetoSlasher.')
+          return
+        }
+
+        const results = []
+        for (const subnetId of SUBNETWORK_IDS) {
+          const subnetwork = encodeSubnetwork({ net, subnetId })
+          const resolver = await ctx.symb.getResolver(slasher, subnetwork)
+          const pending = await ctx.symb.getPendingResolver(slasher, subnetwork)
+          results.push({
+            subnetId,
+            subnetwork,
+            resolver,
+            pendingResolver: pending,
+            hasPending: resolver !== pending,
+          })
+        }
+
+        if (ctx.json) return printJson({ vault, network: net, slasher, results })
+
+        printLine('')
+        for (const r of results) {
+          if (!r.hasPending) {
+            printLine(
+              `There is no pending resolver for subnetwork = ${r.subnetwork} at vault ${vault}`,
+            )
+          } else {
+            printLine(
+              `Pending resolver for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.pendingResolver}`,
+            )
+          }
+          printLine('')
         }
       }),
     )

@@ -17,7 +17,7 @@ function feeToPercentString(feePpm: bigint) {
 export function registerRewardsReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
     .command('curator')
-    .description('Get the curator address for a vault (RewardsV2 CuratorRegistry).')
+    .description('Get the curator address for a vault.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .action((vaultAddress: Address) =>
       runCliAction(async () => {
@@ -30,7 +30,7 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
 
   program
     .command('operators-fee')
-    .description('Get effective operators fee (ppm) for a vault+network (RewardsV2 FeeRegistry).')
+    .description('Get effective operators fee (ppm) for a vault+network.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .argument('<network_address>', 'network address', parseAddressArg)
     .action((vaultAddress: Address, networkAddress: Address) =>
@@ -44,7 +44,7 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
 
   program
     .command('curator-fee')
-    .description('Get effective curator fee (ppm) for a vault+network (RewardsV2 FeeRegistry).')
+    .description('Get effective curator fee (ppm) for a vault+network.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .argument('<network_address>', 'network address', parseAddressArg)
     .action((vaultAddress: Address, networkAddress: Address) =>
@@ -57,8 +57,8 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
     )
 
   program
-    .command('rewards-protocol-fee')
-    .description('Get protocol fee (ppm) for a rewards type and network (RewardsV2 Rewards).')
+    .command('protocol-fee')
+    .description('Get protocol fee (ppm) for a rewards type and network.')
     .argument('<rewards_type>', 'vault-snapshot | cumulative-merkle | 0 | 1')
     .argument('<network_address>', 'network address', parseAddressArg)
     .action((rewardsType, networkAddress: Address) =>
@@ -81,8 +81,8 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
     )
 
   program
-    .command('vault-snapshot-curator-fees')
-    .description('Get claimable curator fees (amount) for a vault+token (RewardsV2 Rewards).')
+    .command('curator-fees')
+    .description('Get claimable curator fees (amount) for a vault+token.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .argument('<token>', 'ERC20 token address', parseAddressArg)
     .action((vaultAddress: Address, tokenAddress: Address) =>

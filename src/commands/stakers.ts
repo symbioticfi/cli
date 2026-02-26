@@ -9,7 +9,7 @@ import { formatTokenAmount } from '../core/units'
 
 export function registerStakerReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
-    .command('active-balance-of')
+    .command('active-balance')
     .description('Get an active balance of a given account at a particular vault.')
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .argument('<address>', 'account address', parseAddressArg)
@@ -39,7 +39,7 @@ export function registerStakerReadCommands(program: Command, getCtx: () => Promi
     )
 
   program
-    .command('withdrawals-of')
+    .command('withdrawals')
     .description("Get some epoch's withdrawals of a given account at a particular vault.")
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .argument('<epoch>', 'epoch', parseUint256Arg)
@@ -72,7 +72,7 @@ export function registerStakerReadCommands(program: Command, getCtx: () => Promi
   program
     .command('withdrawals-claimed')
     .description(
-      "Check if some epoch's withdrawals of a given account at a particular vault are claimed.",
+      "Get whether some epoch's withdrawals of a given account at a particular vault are claimed.",
     )
     .argument('<vault_address>', 'vault address', parseAddressArg)
     .argument('<epoch>', 'epoch', parseUint256Arg)

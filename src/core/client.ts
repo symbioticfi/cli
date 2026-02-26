@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises'
-
 import { z } from 'zod'
 import {
   createPublicClient,
@@ -37,8 +35,6 @@ export type ResolvedClientConfig = {
 export type ResolveClientConfigArgs = {
   chain: string
   rpc?: string
-  provider?: string
-  addressesFile?: string
   timeoutMs?: number
   retries?: number
 }
@@ -72,11 +68,6 @@ function normalizeAddresses(
   return out as ChainAddresses
 }
 
-async function readAddressesOverrideFromFile(filePath: string) {
-  const raw = await readFile(filePath, 'utf8')
-  return addressesSchema.parse(JSON.parse(raw))
-}
-
 function readAddressesOverrideFromEnv(envValue: string) {
   return addressesSchema.parse(JSON.parse(envValue))
 }
@@ -90,15 +81,11 @@ export async function resolveClientConfig(args: ResolveClientConfigArgs): Promis
   const timeoutMs = args.timeoutMs ?? 60_000
   const retries = args.retries ?? 3
 
-  const rpcUrl = args.rpc ?? args.provider ?? env.SYMB_RPC_URL
+  const rpcUrl = args.rpc ?? env.SYMB_RPC_URL
   const rpcUrls = rpcUrl ? [rpcUrl] : base.defaultRpcUrls
 
   const override =
-    args.addressesFile
-      ? await readAddressesOverrideFromFile(args.addressesFile)
-      : env.SYMB_ADDRESSES_JSON
-        ? readAddressesOverrideFromEnv(env.SYMB_ADDRESSES_JSON)
-        : undefined
+    env.SYMB_ADDRESSES_JSON ? readAddressesOverrideFromEnv(env.SYMB_ADDRESSES_JSON) : undefined
 
   const addresses = normalizeAddresses(base.addresses, override)
 

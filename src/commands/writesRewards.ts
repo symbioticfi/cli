@@ -16,7 +16,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('set-curator')
-      .description('Set curator for a vault (RewardsV2 CuratorRegistry).')
+      .description('Set curator for a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<curator>', 'curator address', parseAddressArg),
   ).action((vault: Address, curator: Address, opts: WriteOptions) =>
@@ -46,7 +46,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('set-operators-fee')
-      .description('Set default operators fee (ppm) for a vault (RewardsV2 FeeRegistry).')
+      .description('Set default operators fee (ppm) for a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<fee>', 'fee in ppm (max 500000)', parseUint256Arg),
   ).action((vault: Address, f: bigint, opts: WriteOptions) =>
@@ -75,7 +75,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('set-operators-network-fee')
-      .description('Set network-specific operators fee (ppm) for a vault (RewardsV2 FeeRegistry).')
+      .description('Set network-specific operators fee (ppm) for a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<fee>', 'fee in ppm (max 500000)', parseUint256Arg)
@@ -108,7 +108,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('set-curator-fee')
-      .description('Set default curator fee (ppm) for a vault (RewardsV2 FeeRegistry).')
+      .description('Set default curator fee (ppm) for a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<fee>', 'fee in ppm (max 500000)', parseUint256Arg),
   ).action((vault: Address, f: bigint, opts: WriteOptions) =>
@@ -137,7 +137,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('set-curator-network-fee')
-      .description('Set network-specific curator fee (ppm) for a vault (RewardsV2 FeeRegistry).')
+      .description('Set network-specific curator fee (ppm) for a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<fee>', 'fee in ppm (max 500000)', parseUint256Arg)
@@ -171,7 +171,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('claim-vault-snapshot-rewards')
-      .description('Claim vault snapshot rewards for the signer (RewardsV2 Rewards).')
+      .description('Claim vault snapshot rewards for the signer.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<token>', 'ERC20 token address', parseAddressArg)
@@ -235,7 +235,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('claim-operator-fees')
-      .description('Claim vault snapshot operator fees for the signer (RewardsV2 Rewards).')
+      .description('Claim vault snapshot operator fees for the signer.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<token>', 'ERC20 token address', parseAddressArg)
@@ -301,7 +301,7 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
   withWriteOptions(
     program
       .command('claim-curator-fees')
-      .description('Claim vault snapshot curator fees for the signer curator (RewardsV2 Rewards).')
+      .description('Claim vault snapshot curator fees for the signer curator.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<token>', 'ERC20 token address', parseAddressArg)
       .argument('[recipient]', 'recipient address (default: signer)', parseAddressArg),

@@ -20,7 +20,7 @@ Can be found [here](https://docs.symbiotic.fi/guides/cli).
 ```bash
 curl -fsSL https://raw.githubusercontent.com/symbioticfi/cli/main/install.sh | bash
 symb --help
-symb ops
+symb op list
 ```
 
 By default, this installs into `~/.symb/cli` and adds `~/.symb/bin` to your `PATH` (shell profile).
@@ -40,25 +40,13 @@ pnpm install
 symb --help
 
 # Example
-symb ops
-```
-
-### Development (repo)
-
-```bash
-pnpm dev -- --help
-pnpm build
-./dist/index.js --help
+symb op list
 ```
 
 Write/signature commands require a signer:
 
 - `--private-key <hex>` (discouraged) or `SYMB_PRIVATE_KEY`.
 - Ledger: `--ledger` (optionally `--ledger-path`, `--ledger-address`).
-
-Ledger troubleshooting:
-
-- If Ledger transport fails due to native deps not being built, run `pnpm approve-builds` and then `pnpm install`.
 
 Common env vars:
 
@@ -68,98 +56,109 @@ Common env vars:
 
 If `SYMB_RPC_URL`/`--rpc` is not provided, the CLI uses a built-in fallback list of public RPC endpoints for the selected chain.
 
+### Development (repo)
+
+```bash
+pnpm dev -- --help
+pnpm build
+./dist/index.js --help
+```
+
 ## Commands
 
-### Read Commands
+### net
 
-Networks:
+- `symb net is <address>` - Check if address is network.
+- `symb net middleware <network_address>` - Get network middleware address.
+- `symb net list [--full]` - List all networks.
+- `symb net ops <network_address>` - List all operators opted in network.
+- `symb net stakes <network_address>` - Show stakes of all operators in network.
+- `symb net max-network-limit <vault_address> <network_address>` - Get a maximum network limit at the vault's delegator.
+- `symb net resolver <vault_address> <network_address>` - Get a current resolver for a subnetwork in a vault.
+- `symb net pending-resolver <vault_address> <network_address>` - Get a pending resolver for a subnetwork in a vault.
+- `symb net register [write options]` - Register the signer as a network.
+- `symb net set-max-limit [write options] <vault_address> <max_limit> [subnetwork_id]` - Set a maximum network limit at the vault's delegator.
+- `symb net set-resolver [write options] <vault_address> <resolver> [subnetwork_id]` - Set a resolver for a subnetwork at VetoSlasher.
 
-- `isnet` - Check if address is network.
-- `middleware` - Get network middleware address.
-- `nets` - List all networks.
-- `netops` - List all operators opted in network.
-- `netstakes` - Show stakes of all operators in network.
+### op
 
-Operators:
+- `symb op is <address>` - Check if address is operator.
+- `symb op list` - List all operators.
+- `symb op nets <operator_address>` - List all networks where operator is opted in.
+- `symb op stakes <operator_address>` - Show operator stakes in all networks.
+- `symb op stake <operator_address> <vault_address> <network_address>` - Get operator stake in vault for network (includes shares for NetworkRestakeDelegator).
+- `symb op opted-in-vault <operator_address> <vault_address>` - Check if operator is opted in to a vault.
+- `symb op opted-in-net <operator_address> <network_address>` - Check if operator is opted in to a network.
+- `symb op register [write options]` - Register the signer as an operator.
+- `symb op opt-in-vault [write options] <vault_address>` - Opt-in to a vault.
+- `symb op opt-out-vault [write options] <vault_address>` - Opt-out from a vault.
+- `symb op opt-in-net [write options] <network_address>` - Opt-in to a network.
+- `symb op opt-out-net [write options] <network_address>` - Opt-out from a network.
+- `symb op opt-in-vault-sig [sign options] <vault_address> [duration]` - Get a signature for opt-in to a vault.
+- `symb op opt-out-vault-sig [sign options] <vault_address> [duration]` - Get a signature for opt-out from a vault.
+- `symb op opt-in-net-sig [sign options] <network_address> [duration]` - Get a signature for opt-in to a network.
+- `symb op opt-out-net-sig [sign options] <network_address> [duration]` - Get a signature for opt-out from a network.
 
-- `isop` - Check if address is operator.
-- `ops` - List all operators.
-- `op-vault-net-stake` - Get operator stake in vault for network (includes shares for NetworkRestakeDelegator).
-- `opnets` - List all networks where operator is opted in.
-- `opstakes` - Show operator stakes in all networks.
-- `check-opt-in-vault` - Check if operator is opted in to a vault.
-- `check-opt-in-network` - Check if operator is opted in to a network.
+### vault
 
-Vaults:
+- `symb vault is <address>` - Check if address is vault.
+- `symb vault list [--full]` - List all vaults.
+- `symb vault ops <vault_address>` - List all operators opted into the given vault.
+- `symb vault nets <vault_address>` - List all networks associated with the given vault.
+- `symb vault netsops <vault_address>` - List all operators and their associated networks for the given vault.
+- `symb vault network-limit <vault_address> <network_address>` - Get a network limit at the vault's delegator.
+- `symb vault operator-network-limit <vault_address> <network_address> <operator_address>` - Get an operator-network limit at the vault's delegator.
+- `symb vault operator-network-shares <vault_address> <network_address> <operator_address>` - Get operator-network shares at the vault's delegator.
+- `symb vault total-operator-network-shares <vault_address> <network_address>` - Get total operator-network shares at the vault's delegator.
+- `symb vault set-network-limit [write options] <vault_address> <network_address> <limit> [subnetwork_id]` - Set a network limit at the vault's delegator.
+- `symb vault set-operator-network-limit [write options] <vault_address> <network_address> <operator_address> <limit> [subnetwork_id]` - Set an operator-network limit at the vault's delegator.
+- `symb vault set-operator-network-shares [write options] <vault_address> <network_address> <operator_address> <shares> [subnetwork_id]` - Set an operator-network shares at the vault's delegator.
 
-- `isvault` - Check if address is vault.
-- `vaults` - List all vaults.
-- `vaultops` - List all operators opted into the given vault.
-- `vaultnets` - List all networks associated with the given vault.
-- `vaultnetsops` - List all operators and their associated networks for the given vault.
+### staker
 
-Stakers:
+- `symb staker active-balance <vault_address> <address>` - Get an active balance of a given account at a particular vault.
+- `symb staker withdrawals <vault_address> <epoch> <address>` - Get some epoch's withdrawals of a given account at a particular vault.
+- `symb staker withdrawals-claimed <vault_address> <epoch> <address>` - Check if some epoch's withdrawals of a given account at a particular vault are claimed.
+- `symb staker withdraw [write options] <vault_address> <amount> [claimer]` - Withdraw from the vault.
+- `symb staker claim [write options] <vault_address> <epoch> [recipient]` - Claim a withdrawal for some epoch at the vault.
 
-- `active-balance-of` - Get an active balance of a given account at a particular vault.
-- `withdrawals-of` - Get some epoch's withdrawals of a given account at a particular vault.
-- `withdrawals-claimed` - Check if some epoch's withdrawals of a given account at a particular vault are claimed.
+### rewards
 
-Limits:
+- `symb rewards curator <vault_address>` - Get the curator address for a vault.
+- `symb rewards operators-fee <vault_address> <network_address>` - Get effective operators fee (ppm) for a vault+network.
+- `symb rewards curator-fee <vault_address> <network_address>` - Get effective curator fee (ppm) for a vault+network.
+- `symb rewards protocol-fee <rewards_type> <network_address>` - Get protocol fee (ppm) for a rewards type and network.
+- `symb rewards curator-fees <vault_address> <token>` - Get claimable curator fees (amount) for a vault+token.
+- `symb rewards set-curator [write options] <vault_address> <curator>` - Set curator for a vault.
+- `symb rewards set-operators-fee [write options] <vault_address> <fee>` - Set default operators fee (ppm) for a vault.
+- `symb rewards set-operators-network-fee [write options] <vault_address> <network_address> <fee>` - Set network-specific operators fee (ppm) for a vault.
+- `symb rewards set-curator-fee [write options] <vault_address> <fee>` - Set default curator fee (ppm) for a vault.
+- `symb rewards set-curator-network-fee [write options] <vault_address> <network_address> <fee>` - Set network-specific curator fee (ppm) for a vault.
+- `symb rewards claim-vault-snapshot-rewards [write options] <vault_address> <network_address> <token> [recipient] [first_reward_to_claim] [max_rewards]` - Claim vault snapshot rewards for the signer.
+- `symb rewards claim-operator-fees [write options] <vault_address> <network_address> <token> [recipient] [first_reward_to_claim] [max_rewards]` - Claim vault snapshot operator fees for the signer.
+- `symb rewards claim-curator-fees [write options] <vault_address> <token> [recipient]` - Claim vault snapshot curator fees for the signer curator.
 
-- `max-network-limit` - Get a maximum network limit at the vault's delegator.
-- `resolver` - Get a current resolver for a subnetwork in a vault.
-- `pending-resolver` - Get a pending resolver for a subnetwork in a vault.
-- `network-limit` - Get a network limit at the vault's delegator.
-- `operator-network-limit` - Get an operator-network limit at the vault's delegator.
-- `operator-network-shares` - Get operator-network shares at the vault's delegator.
-- `total-operator-network-shares` - Get total operator-network shares at the vault's delegator.
+## Options / Flags
 
-RewardsV2:
+Global (all commands):
 
-- `curator` - Get the curator address for a vault.
-- `operators-fee` - Get effective operators fee for a vault+network.
-- `curator-fee` - Get effective curator fee for a vault+network.
-- `rewards-protocol-fee` - Get protocol fee for a rewards type and network.
-- `vault-snapshot-curator-fees` - Get claimable curator fees (amount) for a vault+token .
+- `--chain <chain>`: Chain key or chainId (default: `mainnet`; supported: `mainnet`, `hoodi`, `sepolia`)
+- `--rpc <url>`: RPC URL override
+- `--timeout-ms <n>`: RPC request timeout (ms)
+- `--retries <n>`: RPC retry count
+- `--batch-size <n>`: Multicall batch size
+- `--concurrency <n>`: Multicall concurrency
+- `--json`: Machine-readable JSON output
+- `--quiet`: Minimal output
 
-### Write/Sign Commands
+Signing (write + signature commands):
 
-Networks:
+- `--private-key <hex>` (discouraged; use `SYMB_PRIVATE_KEY`)
+- `--ledger`
+- `--ledger-path <path>`
+- `--ledger-address <address>`
 
-- `register-network` - Register the signer as a network.
-- `set-max-network-limit` - Set a maximum network limit at the vault's delegator.
-- `set-resolver` - Set a resolver for a subnetwork at VetoSlasher.
+Write-only:
 
-Operators:
-
-- `register-operator` - Register the signer as an operator.
-- `opt-in-vault` - Opt-in to a vault.
-- `opt-out-vault` - Opt-out from a vault.
-- `opt-in-network` - Opt-in to a network.
-- `opt-out-network` - Opt-out from a network.
-- `opt-in-vault-signature` - Get a signature for opt-in to a vault.
-- `opt-out-vault-signature` - Get a signature for opt-out from a vault.
-- `opt-in-network-signature` - Get a signature for opt-in to a network.
-- `opt-out-network-signature` - Get a signature for opt-out from a network.
-
-Vault Curators:
-
-- `set-network-limit` - Set a network limit at the vault's delegator.
-- `set-operator-network-limit` - Set an operator-network limit at the vault's delegator.
-- `set-operator-network-shares` - Set an operator-network shares at the vault's delegator.
-
-Stakers:
-
-- `withdraw` - Withdraw from the vault.
-- `claim` - Claim a withdrawal for some epoch at the vault.
-
-RewardsV2:
-
-- `set-curator` - Set curator for a vault (RewardsV2 CuratorRegistry).
-- `set-operators-fee` - Set default operators fee (ppm) for a vault (RewardsV2 FeeRegistry).
-- `set-operators-network-fee` - Set network-specific operators fee (ppm) for a vault (RewardsV2 FeeRegistry).
-- `set-curator-fee` - Set default curator fee (ppm) for a vault (RewardsV2 FeeRegistry).
-- `set-curator-network-fee` - Set network-specific curator fee (ppm) for a vault (RewardsV2 FeeRegistry).
-- `claim-vault-snapshot-rewards` - Claim vault snapshot rewards for the signer (RewardsV2 Rewards).
-- `claim-operator-fees` - Claim vault snapshot operator fees for the signer (RewardsV2 Rewards).
-- `claim-curator-fees` - Claim vault snapshot curator fees for the signer curator (RewardsV2 Rewards).
+- `--yes`: Bypass confirmation prompts
+- `--dry-run`: Simulate only (do not send transaction)
