@@ -3,16 +3,8 @@ import type { Account, PrivateKeyAccount } from 'viem/accounts'
 
 import { readEnv } from '../config/env'
 import { accountFromPrivateKey } from '../core/signing/local'
+import { DEFAULT_LEDGER_PATH, type SigningFlags } from './signingOptions'
 import { parseAddress, parseBytes32Hex } from './parse'
-
-export type SigningFlags = {
-  privateKey?: string
-  ledger?: boolean
-  ledgerAddress?: string
-  ledgerPath?: string
-}
-
-const DEFAULT_LEDGER_PATH = "m/44'/60'/0'/0/0"
 
 export async function resolveSigningAccount(
   flags: SigningFlags,
@@ -27,7 +19,8 @@ export async function resolveSigningAccount(
 
   const env = readEnv()
   const pkInput = flags.privateKey ?? env.SYMB_PRIVATE_KEY
-  if (!pkInput) throw new Error('Signer is required (use --ledger, or --private-key, or SYMB_PRIVATE_KEY).')
+  if (!pkInput)
+    throw new Error('Signer is required (use --ledger, or --private-key, or SYMB_PRIVATE_KEY).')
 
   const pk = parseBytes32Hex(pkInput) as Hex
   const account = accountFromPrivateKey(pk) as PrivateKeyAccount

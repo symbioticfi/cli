@@ -2,9 +2,15 @@ import { getAddress, type Address, type Hex } from 'viem'
 import type { Chain, PublicClient, Transport } from 'viem'
 
 import type { ChainAddresses, ChainAddressKey, ChainKey } from '../config/chains'
-import { DELEGATOR_TYPES_NAMES, SLASHER_TYPES_NAMES, SUBNETWORK_IDS, ZERO_ADDRESS } from './constants'
+import {
+  DELEGATOR_TYPES_NAMES,
+  SLASHER_TYPES_NAMES,
+  SUBNETWORK_IDS,
+  ZERO_ADDRESS,
+} from './constants'
 import {
   CuratorRegistryAbi,
+  delegatorAbiByType,
   FeeRegistryAbi,
   FullRestakeDelegatorAbi,
   NetworkMiddlewareServiceAbi,
@@ -106,7 +112,10 @@ export class SymbioticClient {
     return SUBNETWORK_IDS.map((subnetId) => encodeSubnetwork({ net: network, subnetId }))
   }
 
-  private decodeStakeBySubnetwork(values: readonly bigint[], offset: number): {
+  private decodeStakeBySubnetwork(
+    values: readonly bigint[],
+    offset: number,
+  ): {
     stake: StakeBySubnetwork
     hasValue: boolean
     nextOffset: number
@@ -155,9 +164,7 @@ export class SymbioticClient {
         : undefined
 
     const meta =
-      symbol && Number.isFinite(decimals)
-        ? { symbol, decimals: decimals! }
-        : tokenMetaFallback()
+      symbol && Number.isFinite(decimals) ? { symbol, decimals: decimals! } : tokenMetaFallback()
 
     this.tokenMetaCache.set(t, meta)
     return meta
@@ -204,7 +211,9 @@ export class SymbioticClient {
     }))
 
     const middlewareResults = await this.mc(middlewareCalls)
-    const middlewares = middlewareResults.map((middleware: any) => getAddress(middleware as Address))
+    const middlewares = middlewareResults.map((middleware: any) =>
+      getAddress(middleware as Address),
+    )
 
     const result: NetInfo[] = nets.map((net, i) => ({ net, middleware: middlewares[i]! }))
     this.netsCache.set('nets', result)
@@ -316,11 +325,19 @@ export class SymbioticClient {
     for (let idx = 0; idx < results.length; idx++) {
       const v = results[idx]!
       if (v.delegator !== ZERO_ADDRESS) {
-        typeCalls.push({ address: v.delegator, abi: NetworkRestakeDelegatorAbi, functionName: 'TYPE' })
+        typeCalls.push({
+          address: v.delegator,
+          abi: NetworkRestakeDelegatorAbi,
+          functionName: 'TYPE',
+        })
         assignments.push({ idx, role: 'delegatorType' })
       }
       if (v.slasher !== ZERO_ADDRESS) {
-        typeCalls.push({ address: v.slasher, abi: NetworkRestakeDelegatorAbi, functionName: 'TYPE' })
+        typeCalls.push({
+          address: v.slasher,
+          abi: NetworkRestakeDelegatorAbi,
+          functionName: 'TYPE',
+        })
         assignments.push({ idx, role: 'slasherType' })
       }
     }
@@ -338,11 +355,17 @@ export class SymbioticClient {
       if (v.delegator === ZERO_ADDRESS) continue
 
       if (v.delegatorType === 2n || v.delegatorType === 3n) {
-        enrichCalls.push({ address: v.delegator, abi: NetworkRestakeDelegatorAbi, functionName: 'operator' })
+        const abi = delegatorAbiByType(v.delegatorType)
+        enrichCalls.push({
+          address: v.delegator,
+          abi,
+          functionName: 'operator',
+        })
         enrichAssign.push({ idx, role: 'delegatorOperator' })
       }
       if (v.delegatorType === 3n) {
-        enrichCalls.push({ address: v.delegator, abi: NetworkRestakeDelegatorAbi, functionName: 'network' })
+        const abi = delegatorAbiByType(v.delegatorType)
+        enrichCalls.push({ address: v.delegator, abi, functionName: 'network' })
         enrichAssign.push({ idx, role: 'delegatorNetwork' })
       }
     }
@@ -391,7 +414,8 @@ export class SymbioticClient {
     const vaults = await this.getVaults()
     const eligible = vaults.filter((v) => {
       if (v.delegator === ZERO_ADDRESS) return false
-      if (v.delegatorType === 3n && v.delegatorNetwork && v.delegatorNetwork !== network) return false
+      if (v.delegatorType === 3n && v.delegatorNetwork && v.delegatorNetwork !== network)
+        return false
       return true
     })
 
@@ -422,7 +446,12 @@ export class SymbioticClient {
     return results
   }
 
-  async getNetOpsVaults(net: Address): Promise<Array<{ op: Address; vaults: Array<VaultInfo & { limit: StakeBySubnetwork; stake: StakeBySubnetwork }> }>> {
+  async getNetOpsVaults(net: Address): Promise<
+    Array<{
+      op: Address
+      vaults: Array<VaultInfo & { limit: StakeBySubnetwork; stake: StakeBySubnetwork }>
+    }>
+  > {
     const network = getAddress(net)
     const vaults = await this.getNetVaults(network)
     const ops = await this.getNetOps(network)
@@ -471,7 +500,9 @@ export class SymbioticClient {
     return ops.filter((op, i) => Boolean(optins[i]))
   }
 
-  async getVaultNetsByDelegator(delegator: Address): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
+  async getVaultNetsByDelegator(
+    delegator: Address,
+  ): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
     const nets = await this.getNets()
     const d = getAddress(delegator)
 
@@ -534,7 +565,9 @@ export class SymbioticClient {
     return out
   }
 
-  async getVaultNetsOpsFull(vaultInfo: VaultInfo): Promise<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>> {
+  async getVaultNetsOpsFull(
+    vaultInfo: VaultInfo,
+  ): Promise<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>> {
     const nets = await this.getVaultNetsByDelegator(vaultInfo.delegator)
     const ops = await this.getVaultOps(vaultInfo.vault)
 
@@ -554,7 +587,10 @@ export class SymbioticClient {
     }
 
     const stakes = (await this.mc(calls)) as bigint[]
-    const out = nets.map((n) => ({ net: n.net, ops: [] as Array<{ op: Address; stake: StakeBySubnetwork }> }))
+    const out = nets.map((n) => ({
+      net: n.net,
+      ops: [] as Array<{ op: Address; stake: StakeBySubnetwork }>,
+    }))
 
     let i = 0
     for (let netIdx = 0; netIdx < nets.length; netIdx++) {
@@ -568,7 +604,12 @@ export class SymbioticClient {
     return out
   }
 
-  async getOpNetsVaults(op: Address): Promise<Array<{ net: Address; vaults: Array<VaultInfo & { limit: StakeBySubnetwork; stake: StakeBySubnetwork }> }>> {
+  async getOpNetsVaults(op: Address): Promise<
+    Array<{
+      net: Address
+      vaults: Array<VaultInfo & { limit: StakeBySubnetwork; stake: StakeBySubnetwork }>
+    }>
+  > {
     const operator = getAddress(op)
     const nets = await this.getOpNets(operator)
 
@@ -738,7 +779,11 @@ export class SymbioticClient {
     })
   }
 
-  async getOperatorNetworkLimit(delegator: Address, subnetwork: Hex, operator: Address): Promise<bigint> {
+  async getOperatorNetworkLimit(
+    delegator: Address,
+    subnetwork: Hex,
+    operator: Address,
+  ): Promise<bigint> {
     return this.read<bigint>({
       abi: FullRestakeDelegatorAbi,
       address: getAddress(delegator),
@@ -747,7 +792,11 @@ export class SymbioticClient {
     })
   }
 
-  async getOperatorNetworkShares(delegator: Address, subnetwork: Hex, operator: Address): Promise<bigint> {
+  async getOperatorNetworkShares(
+    delegator: Address,
+    subnetwork: Hex,
+    operator: Address,
+  ): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
       address: getAddress(delegator),
@@ -765,7 +814,11 @@ export class SymbioticClient {
     })
   }
 
-  async getStakeByDelegator(delegator: Address, subnetwork: Hex, operator: Address): Promise<bigint> {
+  async getStakeByDelegator(
+    delegator: Address,
+    subnetwork: Hex,
+    operator: Address,
+  ): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
       address: getAddress(delegator),
@@ -881,7 +934,12 @@ export class SymbioticClient {
     })
   }
 
-  async lastUnclaimedReward(account: Address, vault: Address, network: Address, token: Address): Promise<bigint> {
+  async lastUnclaimedReward(
+    account: Address,
+    vault: Address,
+    network: Address,
+    token: Address,
+  ): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultSnapshotRewardsAbi,
       address: this.requireAddress('rewards'),
@@ -890,7 +948,12 @@ export class SymbioticClient {
     })
   }
 
-  async lastUnclaimedOperatorReward(account: Address, vault: Address, network: Address, token: Address): Promise<bigint> {
+  async lastUnclaimedOperatorReward(
+    account: Address,
+    vault: Address,
+    network: Address,
+    token: Address,
+  ): Promise<bigint> {
     return this.read<bigint>({
       abi: VaultSnapshotRewardsAbi,
       address: this.requireAddress('rewards'),

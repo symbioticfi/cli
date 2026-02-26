@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
+import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddress, parseUint48 } from '../cli/parse'
+import { parseAddressArg, parseUint48Arg } from '../cli/argParsers'
 import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import {
@@ -19,28 +20,19 @@ import {
   buildOperatorVaultOptOutTypedData,
 } from '../core/signing/typedData'
 
-import { withSigningOptions, withWriteOptions } from './writeOptions'
+import {
+  withSigningOptions,
+  withWriteOptions,
+  type SigningOptions,
+  type WriteOptions,
+} from './writeOptions'
 
-type SignOpts = {
-  privateKey?: string
-  ledger?: boolean
-  ledgerAddress?: string
-  ledgerPath?: string
-}
-
-type WriteOpts = SignOpts & {
-  yes?: boolean
-  dryRun?: boolean
-}
-
-const DEFAULT_SIG_DURATION_SECONDS = String(7 * 24 * 60 * 60)
+const DEFAULT_SIG_DURATION_SECONDS = 7n * 24n * 60n * 60n
 
 export function registerOperatorWriteCommands(program: Command, getCtx: () => Promise<CliContext>) {
   withWriteOptions(
-    program
-      .command('register-operator')
-      .description('Register the signer as an operator.'),
-  ).action((opts: WriteOpts) =>
+    program.command('register-operator').description('Register the signer as an operator.'),
+  ).action((opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
       await withSigningAccount(opts, async ({ account }) => {
@@ -53,6 +45,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
           address: ctx.resolved.addresses.op_registry,
           functionName: 'registerOperator',
           dryRun: opts.dryRun,
+          yes: opts.yes,
           successMessage: 'Successfully registered as an operator',
         })
       })
@@ -63,11 +56,10 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-in-vault')
       .description('Opt-in to a vault.')
-      .argument('<vault_address>', 'vault address'),
-  ).action((vaultAddress, opts: WriteOpts) =>
+      .argument('<vault_address>', 'vault address', parseAddressArg),
+  ).action((vault: Address, opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const vault = parseAddress(vaultAddress)
       await withSigningAccount(opts, async ({ account }) => {
         await runWriteTx({
           mode: ctx,
@@ -79,6 +71,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
           functionName: 'optIn',
           args: [vault],
           dryRun: opts.dryRun,
+          yes: opts.yes,
           successMessage: `Successfully opted in to vault = ${vault}`,
         })
       })
@@ -89,11 +82,10 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-out-vault')
       .description('Opt-out from a vault.')
-      .argument('<vault_address>', 'vault address'),
-  ).action((vaultAddress, opts: WriteOpts) =>
+      .argument('<vault_address>', 'vault address', parseAddressArg),
+  ).action((vault: Address, opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const vault = parseAddress(vaultAddress)
       await withSigningAccount(opts, async ({ account }) => {
         await runWriteTx({
           mode: ctx,
@@ -105,6 +97,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
           functionName: 'optOut',
           args: [vault],
           dryRun: opts.dryRun,
+          yes: opts.yes,
           successMessage: `Successfully opted out from vault = ${vault}`,
         })
       })
@@ -115,11 +108,10 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-in-network')
       .description('Opt-in to a network.')
-      .argument('<network_address>', 'network address'),
-  ).action((networkAddress, opts: WriteOpts) =>
+      .argument('<network_address>', 'network address', parseAddressArg),
+  ).action((net: Address, opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const net = parseAddress(networkAddress)
       await withSigningAccount(opts, async ({ account }) => {
         await runWriteTx({
           mode: ctx,
@@ -131,6 +123,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
           functionName: 'optIn',
           args: [net],
           dryRun: opts.dryRun,
+          yes: opts.yes,
           successMessage: `Successfully opted in to network = ${net}`,
         })
       })
@@ -141,11 +134,10 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-out-network')
       .description('Opt-out from a network.')
-      .argument('<network_address>', 'network address'),
-  ).action((networkAddress, opts: WriteOpts) =>
+      .argument('<network_address>', 'network address', parseAddressArg),
+  ).action((net: Address, opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const net = parseAddress(networkAddress)
       await withSigningAccount(opts, async ({ account }) => {
         await runWriteTx({
           mode: ctx,
@@ -157,6 +149,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
           functionName: 'optOut',
           args: [net],
           dryRun: opts.dryRun,
+          yes: opts.yes,
           successMessage: `Successfully opted out from network = ${net}`,
         })
       })
@@ -167,13 +160,16 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-in-vault-signature')
       .description('Get a signature for opt-in to a vault.')
-      .argument('<vault_address>', 'vault address')
-      .argument('[duration]', 'seconds until expiry (default 7 days)', DEFAULT_SIG_DURATION_SECONDS),
-  ).action((vaultAddress, duration, opts: SignOpts) =>
+      .argument('<vault_address>', 'vault address', parseAddressArg)
+      .argument(
+        '[duration]',
+        'seconds until expiry (default 7 days)',
+        parseUint48Arg,
+        DEFAULT_SIG_DURATION_SECONDS,
+      ),
+  ).action((vault: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const vault = parseAddress(vaultAddress)
-      const dur = parseUint48(duration)
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_vault_opt_in
@@ -191,7 +187,8 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         })
 
         const signTypedData = account.signTypedData
-        if (!signTypedData) throw new Error('This signer does not support EIP-712 typed data signing.')
+        if (!signTypedData)
+          throw new Error('This signer does not support EIP-712 typed data signing.')
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
@@ -212,13 +209,16 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-out-vault-signature')
       .description('Get a signature for opt-out from a vault.')
-      .argument('<vault_address>', 'vault address')
-      .argument('[duration]', 'seconds until expiry (default 7 days)', DEFAULT_SIG_DURATION_SECONDS),
-  ).action((vaultAddress, duration, opts: SignOpts) =>
+      .argument('<vault_address>', 'vault address', parseAddressArg)
+      .argument(
+        '[duration]',
+        'seconds until expiry (default 7 days)',
+        parseUint48Arg,
+        DEFAULT_SIG_DURATION_SECONDS,
+      ),
+  ).action((vault: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const vault = parseAddress(vaultAddress)
-      const dur = parseUint48(duration)
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_vault_opt_in
@@ -236,7 +236,8 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         })
 
         const signTypedData = account.signTypedData
-        if (!signTypedData) throw new Error('This signer does not support EIP-712 typed data signing.')
+        if (!signTypedData)
+          throw new Error('This signer does not support EIP-712 typed data signing.')
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
@@ -257,13 +258,16 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-in-network-signature')
       .description('Get a signature for opt-in to a network.')
-      .argument('<network_address>', 'network address')
-      .argument('[duration]', 'seconds until expiry (default 7 days)', DEFAULT_SIG_DURATION_SECONDS),
-  ).action((networkAddress, duration, opts: SignOpts) =>
+      .argument('<network_address>', 'network address', parseAddressArg)
+      .argument(
+        '[duration]',
+        'seconds until expiry (default 7 days)',
+        parseUint48Arg,
+        DEFAULT_SIG_DURATION_SECONDS,
+      ),
+  ).action((net: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const net = parseAddress(networkAddress)
-      const dur = parseUint48(duration)
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_net_opt_in
@@ -281,7 +285,8 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         })
 
         const signTypedData = account.signTypedData
-        if (!signTypedData) throw new Error('This signer does not support EIP-712 typed data signing.')
+        if (!signTypedData)
+          throw new Error('This signer does not support EIP-712 typed data signing.')
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
@@ -302,13 +307,16 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     program
       .command('opt-out-network-signature')
       .description('Get a signature for opt-out from a network.')
-      .argument('<network_address>', 'network address')
-      .argument('[duration]', 'seconds until expiry (default 7 days)', DEFAULT_SIG_DURATION_SECONDS),
-  ).action((networkAddress, duration, opts: SignOpts) =>
+      .argument('<network_address>', 'network address', parseAddressArg)
+      .argument(
+        '[duration]',
+        'seconds until expiry (default 7 days)',
+        parseUint48Arg,
+        DEFAULT_SIG_DURATION_SECONDS,
+      ),
+  ).action((net: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const net = parseAddress(networkAddress)
-      const dur = parseUint48(duration)
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_net_opt_in
@@ -326,7 +334,8 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         })
 
         const signTypedData = account.signTypedData
-        if (!signTypedData) throw new Error('This signer does not support EIP-712 typed data signing.')
+        if (!signTypedData)
+          throw new Error('This signer does not support EIP-712 typed data signing.')
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {

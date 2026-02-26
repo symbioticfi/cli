@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
+import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddress } from '../cli/parse'
+import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
 import { SUBNETWORK_IDS } from '../core/constants'
 import { printJson, printLine } from '../core/output'
@@ -11,14 +12,14 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('max-network-limit')
     .description("Get a maximum network limit at the vault's delegator.")
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
-        const delegator = await ctx.symb.getVaultDelegator(vault)
+        const vault = vaultAddress
+        const net = networkAddress
+        const delegator = await ctx.symb.getVaultDelegator(vaultAddress)
 
         const results = []
         for (const subnetId of SUBNETWORK_IDS) {
@@ -42,13 +43,13 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('resolver')
     .description('Get a current resolver for a subnetwork in a vault.')
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
+        const vault = vaultAddress
+        const net = networkAddress
 
         const slasher = await ctx.symb.getVaultSlasher(vault)
         const slasherType = await ctx.symb.getEntityType(slasher)
@@ -78,13 +79,13 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('pending-resolver')
     .description('Get a pending resolver for a subnetwork in a vault.')
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
+        const vault = vaultAddress
+        const net = networkAddress
 
         const slasher = await ctx.symb.getVaultSlasher(vault)
         const slasherType = await ctx.symb.getEntityType(slasher)
@@ -99,7 +100,13 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
           const subnetwork = encodeSubnetwork({ net, subnetId })
           const resolver = await ctx.symb.getResolver(slasher, subnetwork)
           const pending = await ctx.symb.getPendingResolver(slasher, subnetwork)
-          results.push({ subnetId, subnetwork, resolver, pendingResolver: pending, hasPending: resolver !== pending })
+          results.push({
+            subnetId,
+            subnetwork,
+            resolver,
+            pendingResolver: pending,
+            hasPending: resolver !== pending,
+          })
         }
 
         if (ctx.json) return printJson({ vault, network: net, slasher, results })
@@ -107,9 +114,13 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
         printLine('')
         for (const r of results) {
           if (!r.hasPending) {
-            printLine(`There is no pending resolver for subnetwork = ${r.subnetwork} at vault ${vault}`)
+            printLine(
+              `There is no pending resolver for subnetwork = ${r.subnetwork} at vault ${vault}`,
+            )
           } else {
-            printLine(`Pending resolver for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.pendingResolver}`)
+            printLine(
+              `Pending resolver for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.pendingResolver}`,
+            )
           }
           printLine('')
         }
@@ -119,13 +130,13 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('network-limit')
     .description("Get a network limit at the vault's delegator.")
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
+        const vault = vaultAddress
+        const net = networkAddress
 
         const delegator = await ctx.symb.getVaultDelegator(vault)
         const delegatorType = await ctx.symb.getEntityType(delegator)
@@ -147,7 +158,9 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
 
         printLine('')
         for (const r of results) {
-          printLine(`Network limit for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.networkLimit}`)
+          printLine(
+            `Network limit for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.networkLimit}`,
+          )
           printLine('')
         }
       }),
@@ -156,15 +169,15 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('operator-network-limit')
     .description("Get an operator-network limit at the vault's delegator.")
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .argument('<operator_address>', 'operator address')
-    .action((vaultAddress, networkAddress, operatorAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .argument('<operator_address>', 'operator address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address, operatorAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
-        const op = parseAddress(operatorAddress)
+        const vault = vaultAddress
+        const net = networkAddress
+        const op = operatorAddress
 
         const delegator = await ctx.symb.getVaultDelegator(vault)
         const delegatorType = await ctx.symb.getEntityType(delegator)
@@ -196,15 +209,15 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('operator-network-shares')
     .description("Get operator-network shares at the vault's delegator.")
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .argument('<operator_address>', 'operator address')
-    .action((vaultAddress, networkAddress, operatorAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .argument('<operator_address>', 'operator address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address, operatorAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
-        const op = parseAddress(operatorAddress)
+        const vault = vaultAddress
+        const net = networkAddress
+        const op = operatorAddress
 
         const delegator = await ctx.symb.getVaultDelegator(vault)
         const delegatorType = await ctx.symb.getEntityType(delegator)
@@ -236,13 +249,13 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
   program
     .command('total-operator-network-shares')
     .description("Get total operator-network shares at the vault's delegator.")
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const net = parseAddress(networkAddress)
+        const vault = vaultAddress
+        const net = networkAddress
 
         const delegator = await ctx.symb.getVaultDelegator(vault)
         const delegatorType = await ctx.symb.getEntityType(delegator)
@@ -263,7 +276,9 @@ export function registerLimitReadCommands(program: Command, getCtx: () => Promis
 
         printLine('')
         for (const r of results) {
-          printLine(`Total operator-network shares for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.totalOperatorNetworkShares}`)
+          printLine(
+            `Total operator-network shares for subnetwork = ${r.subnetwork} at vault ${vault} is ${r.totalOperatorNetworkShares}`,
+          )
           printLine('')
         }
       }),

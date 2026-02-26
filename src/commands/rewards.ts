@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
+import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddress } from '../cli/parse'
+import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
 import { printJson, printLine } from '../core/output'
 
@@ -17,13 +18,12 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
   program
     .command('curator')
     .description('Get the curator address for a vault (RewardsV2 CuratorRegistry).')
-    .argument('<vault_address>', 'vault address')
-    .action((vaultAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const curator = await ctx.symb.getCurator(vault)
-        if (ctx.json) return printJson({ vault, curator })
+        const curator = await ctx.symb.getCurator(vaultAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, curator })
         printLine(curator)
       }),
     )
@@ -31,15 +31,13 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
   program
     .command('operators-fee')
     .description('Get effective operators fee (ppm) for a vault+network (RewardsV2 FeeRegistry).')
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const network = parseAddress(networkAddress)
-        const fee = await ctx.symb.getOperatorsFee(vault, network)
-        if (ctx.json) return printJson({ vault, network, fee })
+        const fee = await ctx.symb.getOperatorsFee(vaultAddress, networkAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, network: networkAddress, fee })
         printLine(`${fee} (${feeToPercentString(fee)})`)
       }),
     )
@@ -47,15 +45,13 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
   program
     .command('curator-fee')
     .description('Get effective curator fee (ppm) for a vault+network (RewardsV2 FeeRegistry).')
-    .argument('<vault_address>', 'vault address')
-    .argument('<network_address>', 'network address')
-    .action((vaultAddress, networkAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((vaultAddress: Address, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const network = parseAddress(networkAddress)
-        const fee = await ctx.symb.getCuratorFee(vault, network)
-        if (ctx.json) return printJson({ vault, network, fee })
+        const fee = await ctx.symb.getCuratorFee(vaultAddress, networkAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, network: networkAddress, fee })
         printLine(`${fee} (${feeToPercentString(fee)})`)
       }),
     )
@@ -64,11 +60,11 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
     .command('rewards-protocol-fee')
     .description('Get protocol fee (ppm) for a rewards type and network (RewardsV2 Rewards).')
     .argument('<rewards_type>', 'vault-snapshot | cumulative-merkle | 0 | 1')
-    .argument('<network_address>', 'network address')
-    .action((rewardsType, networkAddress) =>
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .action((rewardsType, networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const network = parseAddress(networkAddress)
+        const network = networkAddress
         const type =
           rewardsType === 'vault-snapshot' || rewardsType === '0'
             ? 0n
@@ -87,15 +83,13 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
   program
     .command('vault-snapshot-curator-fees')
     .description('Get claimable curator fees (amount) for a vault+token (RewardsV2 Rewards).')
-    .argument('<vault_address>', 'vault address')
-    .argument('<token>', 'ERC20 token address')
-    .action((vaultAddress, tokenAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<token>', 'ERC20 token address', parseAddressArg)
+    .action((vaultAddress: Address, tokenAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const token = parseAddress(tokenAddress)
-        const fees = await ctx.symb.curatorFees(vault, token)
-        if (ctx.json) return printJson({ vault, token, fees })
+        const fees = await ctx.symb.curatorFees(vaultAddress, tokenAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, token: tokenAddress, fees })
         printLine(fees.toString())
       }),
     )

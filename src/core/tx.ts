@@ -4,9 +4,13 @@ import type { Account } from 'viem/accounts'
 import ora from 'ora'
 
 import { createViemTransport, type ResolvedClientConfig } from './client'
+import { confirmOrExit } from './confirm'
 import { printJson, printLine, type OutputMode } from './output'
 
-export function createWalletClientForAccount(resolved: ResolvedClientConfig, account: Account): WalletClient<Transport, Chain, Account> {
+export function createWalletClientForAccount(
+  resolved: ResolvedClientConfig,
+  account: Account,
+): WalletClient<Transport, Chain, Account> {
   return createWalletClient({
     chain: resolved.viemChain,
     transport: createViemTransport(resolved),
@@ -51,26 +55,68 @@ export async function runWriteTx(args: {
   functionName: string
   args?: readonly unknown[]
   dryRun?: boolean
+  yes?: boolean
+  confirmMessage?: string
   successMessage?: string
 }): Promise<Hash | undefined> {
   const canSpin = !args.mode.json && !args.mode.quiet
 
+  const renderArg = (value: unknown) => {
+    if (typeof value === 'bigint') return value.toString()
+    if (typeof value === 'string') return value
+    if (value === null || value === undefined) return String(value)
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    try {
+      return JSON.stringify(value, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))
+    } catch {
+      return String(value)
+    }
+  }
+
+  const defaultConfirmMessage = () => {
+    const renderedArgs = (args.args ?? []).map(renderArg).join(', ')
+    const call = `${args.functionName}(${renderedArgs})`
+    return `Send transaction on chainId=${args.resolved.chainId}: ${call} -> ${args.address}?`
+  }
+
   const walletClient = createWalletClientForAccount(args.resolved, args.account)
   const simulateLabel = canSpin ? ora('Simulating...').start() : undefined
-  const request = await simulateWriteRequest({
-    publicClient: args.publicClient,
-    account: args.account,
-    abi: args.abi,
-    address: args.address,
-    functionName: args.functionName,
-    args: args.args,
-  })
-  simulateLabel?.stop()
+  let request: any
+  try {
+    request = await simulateWriteRequest({
+      publicClient: args.publicClient,
+      account: args.account,
+      abi: args.abi,
+      address: args.address,
+      functionName: args.functionName,
+      args: args.args,
+    })
+  } finally {
+    simulateLabel?.stop()
+  }
 
   if (args.dryRun) {
     if (args.mode.json) printJson({ dryRun: true })
     else printLine('Simulated successfully.')
     return undefined
+  }
+
+  if (!args.yes) {
+    // Avoid breaking machine-readable output with interactive prompts.
+    if (args.mode.json) {
+      throw new Error('Write confirmation is required. Re-run with --yes when using --json.')
+    }
+    if (!process.stdin.isTTY) {
+      throw new Error(
+        'Write confirmation is required. Re-run with --yes in non-interactive environments.',
+      )
+    }
+
+    const ok = await confirmOrExit({
+      yes: args.yes,
+      message: args.confirmMessage ?? defaultConfirmMessage(),
+    })
+    if (!ok) return undefined
   }
 
   const hash = await sendWriteRequest({ walletClient, request })
@@ -84,8 +130,11 @@ export async function runWriteTx(args: {
   if (canSpin) {
     printLine(`Transaction sent: ${hash}`)
     const spinner = ora('Waiting for transaction receipt...').start()
-    await args.publicClient.waitForTransactionReceipt({ hash })
-    spinner.stop()
+    try {
+      await args.publicClient.waitForTransactionReceipt({ hash })
+    } finally {
+      spinner.stop()
+    }
   } else {
     printLine(`Transaction sent: ${hash}, waiting...`)
     await args.publicClient.waitForTransactionReceipt({ hash })

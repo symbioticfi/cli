@@ -1,13 +1,13 @@
 import type { Command } from 'commander'
 
-const DEFAULT_LEDGER_PATH = "m/44'/60'/0'/0/0"
+import { DEFAULT_LEDGER_PATH, type SigningFlags, type WriteFlags } from '../cli/signingOptions'
+
+export type SigningOptions = SigningFlags
+export type WriteOptions = WriteFlags
 
 export function withSigningOptions(cmd: Command) {
   return cmd
-    .option(
-      '--private-key <hex>',
-      'Private key to sign with (discouraged; use SYMB_PRIVATE_KEY)',
-    )
+    .option('--private-key <hex>', 'Private key to sign with (discouraged; use SYMB_PRIVATE_KEY)')
     .option('--ledger', 'Use a Ledger device for signing instead of a private key', false)
     .option('--ledger-path <path>', 'BIP32 derivation path for Ledger account', DEFAULT_LEDGER_PATH)
     .option(

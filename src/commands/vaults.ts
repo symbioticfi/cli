@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
+import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddress } from '../cli/parse'
+import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
 import { printIndented, printJson, printLine } from '../core/output'
 import { formatTokenAmount } from '../core/units'
@@ -10,11 +11,11 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
   program
     .command('isvault')
     .description('Check if address is vault.')
-    .argument('<address>', 'an address to check')
-    .action((address) =>
+    .argument('<address>', 'an address to check', parseAddressArg)
+    .action((address: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const isVault = await ctx.symb.isVault(parseAddress(address))
+        const isVault = await ctx.symb.isVault(address)
         if (ctx.json) return printJson({ isVault })
         printLine(String(isVault))
       }),
@@ -51,7 +52,10 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
             4,
           )
           printIndented(`Slasher: ${v.slasher} (${ctx.symb.slasherTypeName(v.slasherType)})`, 4)
-          printIndented(`TVL: ${formatTokenAmount(v.tvl, collateralMeta)} ${collateralMeta.symbol}`, 4)
+          printIndented(
+            `TVL: ${formatTokenAmount(v.tvl, collateralMeta)} ${collateralMeta.symbol}`,
+            4,
+          )
           printLine('')
 
           if (opts.full) {
@@ -88,15 +92,14 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
   program
     .command('vaultops')
     .description('List all operators opted into the given vault.')
-    .argument('<vault_address>', 'vault address')
-    .action((vaultAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const ops = await ctx.symb.getVaultOps(vault)
-        if (ctx.json) return printJson({ vault, operators: ops })
+        const ops = await ctx.symb.getVaultOps(vaultAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, operators: ops })
 
-        printLine(`Vault: ${vault}`)
+        printLine(`Vault: ${vaultAddress}`)
         printLine(`Operators [${ops.length} total]:`)
         for (const op of ops) printIndented(`Operator: ${op}`, 2)
       }),
@@ -105,15 +108,14 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
   program
     .command('vaultnets')
     .description('List all networks associated with the given vault.')
-    .argument('<vault_address>', 'vault address')
-    .action((vaultAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const nets = await ctx.symb.getVaultNets(vault)
-        if (ctx.json) return printJson({ vault, networks: nets })
+        const nets = await ctx.symb.getVaultNets(vaultAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, networks: nets })
 
-        printLine(`Vault: ${vault}`)
+        printLine(`Vault: ${vaultAddress}`)
         printLine(`Networks [${nets.length} total]:`)
         for (const net of nets) printIndented(`Network: ${net.net}`, 2)
       }),
@@ -122,21 +124,19 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
   program
     .command('vaultnetsops')
     .description('List all operators and their associated networks for the given vault.')
-    .argument('<vault_address>', 'vault address')
-    .action((vaultAddress) =>
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .action((vaultAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const vault = parseAddress(vaultAddress)
-        const netsOps = await ctx.symb.getVaultNetsOps(vault)
-        if (ctx.json) return printJson({ vault, netsOps })
+        const netsOps = await ctx.symb.getVaultNetsOps(vaultAddress)
+        if (ctx.json) return printJson({ vault: vaultAddress, netsOps })
 
-        const nets = Object.keys(netsOps)
-        printLine(`Vault: ${vault}`)
-        printLine(`Networks [${nets.length} total]:`)
+        const entries = Object.entries(netsOps) as Array<[Address, Address[]]>
+        printLine(`Vault: ${vaultAddress}`)
+        printLine(`Networks [${entries.length} total]:`)
         printLine('')
 
-        for (const net of nets) {
-          const ops = netsOps[net as any] ?? []
+        for (const [net, ops] of entries) {
           printIndented(`Network: ${net}`, 2)
           printIndented(`Operators [${ops.length} total]:`, 2)
           for (const op of ops) printIndented(`Operator: ${op}`, 4)
@@ -145,4 +145,3 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
       }),
     )
 }
-

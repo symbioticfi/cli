@@ -23,11 +23,6 @@ symb --help
 symb ops
 ```
 
-Requirements:
-
-- Node >= 20
-- pnpm (the installer will enable it via `corepack` if missing)
-
 By default, this installs into `~/.symb/cli` and adds `~/.symb/bin` to your `PATH` (shell profile).
 
 ### Local Install (repo)

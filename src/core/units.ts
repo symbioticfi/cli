@@ -9,7 +9,7 @@ export function formatTokenAmount(value: bigint, meta: TokenMeta): string {
 
 export function parseTokenAmount(amount: string, meta: TokenMeta): bigint {
   if (meta.decimals === 0) {
-    throw new Error('Token decimals are unknown; use --wei or provide a supported token')
+    throw new Error('Token decimals are unknown; cannot parse token units')
   }
   // viem validates decimal format; this also rejects negative numbers.
   const parsed = parseUnits(amount, meta.decimals)

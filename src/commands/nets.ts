@@ -1,7 +1,8 @@
 import type { Command } from 'commander'
+import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddress } from '../cli/parse'
+import { parseAddressArg } from '../cli/argParsers'
 import { runCliAction } from '../cli/run'
 import { groupBy } from '../core/format'
 import { printIndented, printJson, printLine } from '../core/output'
@@ -11,11 +12,11 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
   program
     .command('isnet')
     .description('Check if address is network.')
-    .argument('<address>', 'an address to check')
-    .action((address) =>
+    .argument('<address>', 'an address to check', parseAddressArg)
+    .action((address: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const isNet = await ctx.symb.isNet(parseAddress(address))
+        const isNet = await ctx.symb.isNet(address)
         if (ctx.json) return printJson({ isNet })
         printLine(String(isNet))
       }),
@@ -24,11 +25,15 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
   program
     .command('middleware')
     .description('Get network middleware address.')
-    .argument('<network_address>', 'an address of the network to get a middleware for')
-    .action((networkAddress) =>
+    .argument(
+      '<network_address>',
+      'an address of the network to get a middleware for',
+      parseAddressArg,
+    )
+    .action((networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const middleware = await ctx.symb.getMiddleware(parseAddress(networkAddress))
+        const middleware = await ctx.symb.getMiddleware(networkAddress)
         if (ctx.json) return printJson({ middleware })
         printLine(middleware)
       }),
@@ -84,16 +89,19 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
   program
     .command('netops')
     .description('List all operators opted in network.')
-    .argument('<network_address>', 'an address of the network to get operators for')
-    .action((networkAddress) =>
+    .argument(
+      '<network_address>',
+      'an address of the network to get operators for',
+      parseAddressArg,
+    )
+    .action((networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const net = parseAddress(networkAddress)
-        const ops = await ctx.symb.getNetOps(net)
+        const ops = await ctx.symb.getNetOps(networkAddress)
 
-        if (ctx.json) return printJson({ network: net, operators: ops })
+        if (ctx.json) return printJson({ network: networkAddress, operators: ops })
 
-        printLine(`Network: ${net}`)
+        printLine(`Network: ${networkAddress}`)
         printLine(`Operators [${ops.length} total]:`)
         for (const op of ops) printIndented(`Operator: ${op}`, 2)
       }),
@@ -102,31 +110,35 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
   program
     .command('netstakes')
     .description('Show stakes of all operators in network.')
-    .argument('<network_address>', 'an address of the network to get a whole stake data for')
-    .action((networkAddress) =>
+    .argument(
+      '<network_address>',
+      'an address of the network to get a whole stake data for',
+      parseAddressArg,
+    )
+    .action((networkAddress: Address) =>
       runCliAction(async () => {
         const ctx = await getCtx()
-        const net = parseAddress(networkAddress)
 
-        const middleware = await ctx.symb.getMiddleware(net)
-        const opsVaults = await ctx.symb.getNetOpsVaults(net)
+        const middleware = await ctx.symb.getMiddleware(networkAddress)
+        const opsVaults = await ctx.symb.getNetOpsVaults(networkAddress)
 
-        if (ctx.json) return printJson({ network: net, middleware, operators: opsVaults })
+        if (ctx.json)
+          return printJson({ network: networkAddress, middleware, operators: opsVaults })
 
-        printLine(`Network: ${net}`)
+        printLine(`Network: ${networkAddress}`)
         printLine(`Middleware: ${middleware}`)
         printLine(`Operators [${opsVaults.length} total]:`)
 
-        const totalStakes = new Map<string, bigint>()
+        const totalStakes = new Map<Address, bigint>()
 
         for (const op of opsVaults) {
           printIndented(`Operator: ${op.op}`, 2)
 
           const byCollateral = groupBy(op.vaults, (v) => v.collateral)
-          let totalOpStakeStr = ''
+          const totalOpStakeParts: string[] = []
 
           for (const [collateral, vaults] of byCollateral.entries()) {
-            const tokenMeta = await ctx.symb.getTokenMeta(parseAddress(collateral))
+            const tokenMeta = await ctx.symb.getTokenMeta(collateral)
             printIndented(`Collateral: ${collateral} (${tokenMeta.symbol})`, 4)
 
             let stakesSum = 0n
@@ -141,12 +153,12 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
               stakesSum += stake
             }
 
-            totalOpStakeStr += `${formatTokenAmount(stakesSum, tokenMeta)} ${tokenMeta.symbol} + `
+            totalOpStakeParts.push(`${formatTokenAmount(stakesSum, tokenMeta)} ${tokenMeta.symbol}`)
             totalStakes.set(collateral, (totalStakes.get(collateral) ?? 0n) + stakesSum)
           }
 
-          if (totalOpStakeStr) {
-            printIndented(`Total stake: ${totalOpStakeStr.slice(0, -3)}`, 4)
+          if (totalOpStakeParts.length) {
+            printIndented(`Total stake: ${totalOpStakeParts.join(' + ')}`, 4)
           } else {
             printIndented('Total stake: 0', 4)
           }
@@ -155,8 +167,11 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
 
         printLine('Total stakes:')
         for (const [collateral, stake] of totalStakes.entries()) {
-          const meta = await ctx.symb.getTokenMeta(parseAddress(collateral))
-          printIndented(`Collateral ${collateral} (${meta.symbol}): ${formatTokenAmount(stake, meta)}`, 2)
+          const meta = await ctx.symb.getTokenMeta(collateral)
+          printIndented(
+            `Collateral ${collateral} (${meta.symbol}): ${formatTokenAmount(stake, meta)}`,
+            2,
+          )
         }
       }),
     )
