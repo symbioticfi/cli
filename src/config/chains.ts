@@ -1,7 +1,7 @@
 import { getAddress, type Address, type Chain } from 'viem'
-import { mainnet, sepolia } from 'viem/chains'
+import { hoodi, mainnet } from 'viem/chains'
 
-export type ChainKey = 'mainnet' | 'sepolia' | 'hoodi'
+export type ChainKey = 'mainnet' | 'hoodi'
 
 export const CORE_ADDRESS_KEYS = [
   'op_registry',
@@ -11,16 +11,17 @@ export const CORE_ADDRESS_KEYS = [
   'middleware_service',
   'vault_factory',
 ] as const
-export type CoreAddressKey = typeof CORE_ADDRESS_KEYS[number]
+export type CoreAddressKey = (typeof CORE_ADDRESS_KEYS)[number]
 
 // RewardsV2 (optional on some chains).
 export const REWARDS_V2_ADDRESS_KEYS = ['curator_registry', 'fee_registry', 'rewards'] as const
-export type RewardsV2AddressKey = typeof REWARDS_V2_ADDRESS_KEYS[number]
+export type RewardsV2AddressKey = (typeof REWARDS_V2_ADDRESS_KEYS)[number]
 
 export const ALL_ADDRESS_KEYS = [...CORE_ADDRESS_KEYS, ...REWARDS_V2_ADDRESS_KEYS] as const
-export type ChainAddressKey = typeof ALL_ADDRESS_KEYS[number]
+export type ChainAddressKey = (typeof ALL_ADDRESS_KEYS)[number]
 
-export type ChainAddresses = Record<CoreAddressKey, Address> & Partial<Record<RewardsV2AddressKey, Address>>
+export type ChainAddresses = Record<CoreAddressKey, Address> &
+  Partial<Record<RewardsV2AddressKey, Address>>
 
 export type ChainConfig = {
   key: ChainKey
@@ -31,8 +32,6 @@ export type ChainConfig = {
 }
 
 export const CHAIN_KEY_BY_ID: Record<string, ChainKey> = {
-  sepolia: 'sepolia',
-  '11155111': 'sepolia',
   mainnet: 'mainnet',
   '1': 'mainnet',
   hoodi: 'hoodi',
@@ -61,27 +60,7 @@ const baseTestnetAddresses: ChainAddresses = {
   vault_factory: a('0x407A039D94948484D356eFB765b3c74382A050B4'),
 }
 
-const hoodiChain: Chain = {
-  id: 560_048,
-  name: 'Hoodi',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://ethereum-hoodi-rpc.publicnode.com'] },
-  },
-}
-
 export const CHAIN_CONFIGS: Record<ChainKey, ChainConfig> = {
-  sepolia: {
-    key: 'sepolia',
-    chainId: 11_155_111,
-    defaultRpcUrls: [
-      'https://ethereum-sepolia-rpc.publicnode.com',
-      'https://rpc.ankr.com/eth_sepolia',
-      'https://sepolia.drpc.org',
-    ],
-    addresses: baseTestnetAddresses,
-    viemChain: sepolia,
-  },
   mainnet: {
     key: 'mainnet',
     chainId: 1,
@@ -109,13 +88,13 @@ export const CHAIN_CONFIGS: Record<ChainKey, ChainConfig> = {
   hoodi: {
     key: 'hoodi',
     chainId: 560_048,
-    defaultRpcUrls: ['https://ethereum-hoodi-rpc.publicnode.com'],
+    defaultRpcUrls: [...hoodi.rpcUrls.default.http, 'https://ethereum-hoodi-rpc.publicnode.com'],
     addresses: {
       ...baseTestnetAddresses,
       curator_registry: a('0xCEa3eE486f27B3A80a87DB3a9e7d011F8afA73Cc'),
       fee_registry: a('0xD48B2C3c3c2dfd62BC0e9c7146A4eF577f599A62'),
       rewards: a('0xDf39bB990e64Dfb29dDc5F9Eda9B2c06E36D8c8C'),
     },
-    viemChain: hoodiChain,
+    viemChain: hoodi,
   },
 }

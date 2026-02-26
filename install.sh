@@ -8,7 +8,9 @@ SYMB_DIR="${SYMB_DIR:-"$BASE_DIR/.symb"}"
 SYMB_BIN_DIR="$SYMB_DIR/bin"
 SYMB_CLI_DIR="$SYMB_DIR/cli"
 
-ARCHIVE_URL="${SYMB_ARCHIVE_URL:-"https://codeload.github.com/symbioticfi/cli/tar.gz/refs/heads/main"}"
+SYMB_REPO="${SYMB_REPO:-"symbioticfi/cli"}"
+SYMB_REF="${SYMB_REF:-"ts"}" # TODO
+ARCHIVE_URL="${SYMB_ARCHIVE_URL:-"https://codeload.github.com/$SYMB_REPO/tar.gz/refs/heads/$SYMB_REF"}"
 
 for cmd in curl tar node; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "Missing required command: $cmd" >&2; exit 1; }
@@ -35,10 +37,16 @@ if ! command -v pnpm >/dev/null 2>&1; then
   PNPM="$SYMB_BIN_DIR/pnpm"
 fi
 
-echo "Downloading symbioticfi/cli@main..."
+echo "Downloading ${SYMB_REPO}@${SYMB_REF}..."
 rm -rf "$SYMB_CLI_DIR"
 mkdir -p "$SYMB_CLI_DIR"
 curl -sSf -L "$ARCHIVE_URL" | tar -xz -C "$SYMB_CLI_DIR" --strip-components=1
+
+if [ ! -f "$SYMB_CLI_DIR/package.json" ]; then
+  echo "package.json not found after download. Are you installing the TypeScript CLI?" >&2
+  echo "Tip: set SYMB_REF=main (or SYMB_ARCHIVE_URL to a tarball URL) and retry." >&2
+  exit 1
+fi
 
 echo "Installing dependencies..."
 (cd "$SYMB_CLI_DIR" && "$PNPM" install --frozen-lockfile)

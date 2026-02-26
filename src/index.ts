@@ -18,7 +18,7 @@ const program = new Command()
 program.name('symb').description('Symbiotic CLI (TypeScript + viem)').version('0.0.0')
 
 program
-  .option('--chain <chain>', 'Chain key or chainId (mainnet, sepolia, hoodi)', 'mainnet')
+  .option('--chain <chain>', 'Chain key or chainId (mainnet, hoodi)', 'mainnet')
   .option('--rpc <url>', 'Ethereum RPC URL override')
   .option('--provider <url>', 'Alias for --rpc (backwards compatible)')
   .option('--addresses-file <path>', 'JSON file overriding deployed addresses')

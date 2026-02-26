@@ -54,7 +54,7 @@ describe('resolveClientConfig', () => {
     expect(c.rpcUrl).toBe('https://rpc.example')
   })
 
-  it('merges addresses override from env (adds optional rewards addresses)', async () => {
+  it('merges addresses override from env', async () => {
     const override = {
       curator_registry: '0x1111111111111111111111111111111111111111',
       fee_registry: '0x2222222222222222222222222222222222222222',
@@ -62,8 +62,8 @@ describe('resolveClientConfig', () => {
     }
     process.env.SYMB_ADDRESSES_JSON = JSON.stringify(override)
 
-    const cfg = await resolveClientConfig({ chain: 'sepolia' })
-    expect(cfg.addresses.op_registry).toBe(CHAIN_CONFIGS.sepolia.addresses.op_registry)
+    const cfg = await resolveClientConfig({ chain: 'hoodi' })
+    expect(cfg.addresses.op_registry).toBe(CHAIN_CONFIGS.hoodi.addresses.op_registry)
     expect(cfg.addresses.curator_registry).toBe(getAddress(override.curator_registry))
     expect(cfg.addresses.fee_registry).toBe(getAddress(override.fee_registry))
     expect(cfg.addresses.rewards).toBe(getAddress(override.rewards))
@@ -104,4 +104,3 @@ describe('resolveClientConfig', () => {
     await expect(resolveClientConfig({ chain: 'mainnet' })).rejects.toThrow()
   })
 })
-
