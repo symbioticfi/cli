@@ -1,9 +1,11 @@
 import { getAddress, type Address, type Hex } from 'viem'
 import type { Chain, PublicClient, Transport } from 'viem'
 
-import { CHAIN_CONFIGS, type ChainAddresses, type ChainKey } from '../config/chains'
+import type { ChainAddresses, ChainAddressKey, ChainKey } from '../config/chains'
 import { DELEGATOR_TYPES_NAMES, SLASHER_TYPES_NAMES, SUBNETWORK_IDS, ZERO_ADDRESS } from './constants'
 import {
+  CuratorRegistryAbi,
+  FeeRegistryAbi,
   FullRestakeDelegatorAbi,
   NetworkMiddlewareServiceAbi,
   NetworkRegistryAbi,
@@ -11,8 +13,10 @@ import {
   OperatorNetworkOptInServiceAbi,
   OperatorRegistryAbi,
   OperatorVaultOptInServiceAbi,
+  ProtocolFeesAbi,
   VaultAbi,
   VaultFactoryAbi,
+  VaultSnapshotRewardsAbi,
   VaultTokenizedAbi,
   VetoSlasherAbi,
 } from './contracts'
@@ -24,6 +28,7 @@ import { tokenMetaFallback } from './units'
 
 export type SymbioticClientOptions = {
   chainKey: ChainKey
+  chainId: number
   addresses: ChainAddresses
   publicClient: PublicClient<Transport, Chain>
   multicallBatchSize?: number
@@ -31,6 +36,7 @@ export type SymbioticClientOptions = {
 }
 
 export class SymbioticClient {
+  private readonly chainKey: ChainKey
   private readonly chainId: number
   private readonly addresses: ChainAddresses
   private readonly publicClient: PublicClient<Transport, Chain>
@@ -43,7 +49,8 @@ export class SymbioticClient {
   private readonly vaultsCache = new TtlCache<string, VaultInfo[]>(60 * 1000)
 
   constructor(opts: SymbioticClientOptions) {
-    this.chainId = CHAIN_CONFIGS[opts.chainKey].chainId
+    this.chainKey = opts.chainKey
+    this.chainId = opts.chainId
     this.addresses = opts.addresses
     this.publicClient = opts.publicClient
     this.multicallBatchSize = opts.multicallBatchSize ?? 400
@@ -56,6 +63,20 @@ export class SymbioticClient {
 
   getAddresses() {
     return this.addresses
+  }
+
+  requireAddress(key: ChainAddressKey): Address {
+    const address = this.addresses[key] as Address | undefined
+    return this.requireAddressValue(key, address)
+  }
+
+  private requireAddressValue(name: string, address: Address | undefined): Address {
+    if (!address) {
+      throw new Error(
+        `${name} address is not configured for chain ${this.chainKey}. Provide it via --addresses-file or SYMB_ADDRESSES_JSON.`,
+      )
+    }
+    return address
   }
 
   private async read<T>(args: {
@@ -78,6 +99,28 @@ export class SymbioticClient {
       batchSize: this.multicallBatchSize,
       concurrency: this.multicallConcurrency,
     })
+  }
+
+  private subnetworksForNet(net: Address): Hex[] {
+    const network = getAddress(net)
+    return SUBNETWORK_IDS.map((subnetId) => encodeSubnetwork({ net: network, subnetId }))
+  }
+
+  private decodeStakeBySubnetwork(values: readonly bigint[], offset: number): {
+    stake: StakeBySubnetwork
+    hasValue: boolean
+    nextOffset: number
+  } {
+    const stake: StakeBySubnetwork = {}
+    let hasValue = false
+    for (const subnetId of SUBNETWORK_IDS) {
+      const value = values[offset++]!
+      if (value > 0n) {
+        stake[subnetId] = value
+        hasValue = true
+      }
+    }
+    return { stake, hasValue, nextOffset: offset }
   }
 
   async getTokenMeta(token: Address): Promise<TokenMeta> {
@@ -123,7 +166,7 @@ export class SymbioticClient {
   async getMiddleware(net: Address): Promise<Address> {
     const middleware = await this.read<Address>({
       abi: NetworkMiddlewareServiceAbi,
-      address: this.addresses.middleware_service,
+      address: this.requireAddress('middleware_service'),
       functionName: 'middleware',
       args: [getAddress(net)],
     })
@@ -136,14 +179,14 @@ export class SymbioticClient {
 
     const total = await this.read<bigint>({
       abi: NetworkRegistryAbi,
-      address: this.addresses.net_registry,
+      address: this.requireAddress('net_registry'),
       functionName: 'totalEntities',
     })
 
     const calls: any[] = []
     for (let i = 0n; i < total; i++) {
       calls.push({
-        address: this.addresses.net_registry,
+        address: this.requireAddress('net_registry'),
         abi: NetworkRegistryAbi,
         functionName: 'entity',
         args: [i],
@@ -154,7 +197,7 @@ export class SymbioticClient {
     const nets = entities.map((net: any) => getAddress(net as Address))
 
     const middlewareCalls = nets.map((net) => ({
-      address: this.addresses.middleware_service,
+      address: this.requireAddress('middleware_service'),
       abi: NetworkMiddlewareServiceAbi,
       functionName: 'middleware',
       args: [net],
@@ -174,14 +217,14 @@ export class SymbioticClient {
 
     const total = await this.read<bigint>({
       abi: OperatorRegistryAbi,
-      address: this.addresses.op_registry,
+      address: this.requireAddress('op_registry'),
       functionName: 'totalEntities',
     })
 
     const calls: any[] = []
     for (let i = 0n; i < total; i++) {
       calls.push({
-        address: this.addresses.op_registry,
+        address: this.requireAddress('op_registry'),
         abi: OperatorRegistryAbi,
         functionName: 'entity',
         args: [i],
@@ -198,7 +241,7 @@ export class SymbioticClient {
     const nets = await this.getNets()
 
     const optinCalls = nets.map((net) => ({
-      address: this.addresses.op_net_opt_in,
+      address: this.requireAddress('op_net_opt_in'),
       abi: OperatorNetworkOptInServiceAbi,
       functionName: 'isOptedIn',
       args: [op, net.net],
@@ -212,7 +255,7 @@ export class SymbioticClient {
     const ops = await this.getOps()
 
     const calls = ops.map((op) => ({
-      address: this.addresses.op_net_opt_in,
+      address: this.requireAddress('op_net_opt_in'),
       abi: OperatorNetworkOptInServiceAbi,
       functionName: 'isOptedIn',
       args: [op, network],
@@ -227,14 +270,14 @@ export class SymbioticClient {
 
     const total = await this.read<bigint>({
       abi: VaultFactoryAbi,
-      address: this.addresses.vault_factory,
+      address: this.requireAddress('vault_factory'),
       functionName: 'totalEntities',
     })
 
     const entityCalls: any[] = []
     for (let i = 0n; i < total; i++) {
       entityCalls.push({
-        address: this.addresses.vault_factory,
+        address: this.requireAddress('vault_factory'),
         abi: VaultFactoryAbi,
         functionName: 'entity',
         args: [i],
@@ -287,7 +330,7 @@ export class SymbioticClient {
       results[idx]![role] = typeResults[i]! as bigint
     }
 
-    // Delegator enrichment (fixes symb.py bug where only the last vault gated this work)
+    // Delegator enrichment: resolve optional operator/network fields for specific delegator types.
     const enrichCalls: any[] = []
     const enrichAssign: Array<{ idx: number; role: 'delegatorOperator' | 'delegatorNetwork' }> = []
     for (let idx = 0; idx < results.length; idx++) {
@@ -353,38 +396,27 @@ export class SymbioticClient {
     })
 
     const limitCalls: any[] = []
+    const subnetworks = this.subnetworksForNet(network)
     for (const vault of eligible) {
-      for (const subnetId of SUBNETWORK_IDS) {
-        const subnetwork = encodeSubnetwork({ net: network, subnetId })
-        if (vault.delegatorType === 3n) {
-          limitCalls.push({
-            address: vault.delegator,
-            abi: FullRestakeDelegatorAbi,
-            functionName: 'maxNetworkLimit',
-            args: [subnetwork],
-          })
-        } else {
-          limitCalls.push({
-            address: vault.delegator,
-            abi: FullRestakeDelegatorAbi,
-            functionName: 'networkLimit',
-            args: [subnetwork],
-          })
-        }
+      const functionName = vault.delegatorType === 3n ? 'maxNetworkLimit' : 'networkLimit'
+      for (const subnetwork of subnetworks) {
+        limitCalls.push({
+          address: vault.delegator,
+          abi: FullRestakeDelegatorAbi,
+          functionName,
+          args: [subnetwork],
+        })
       }
     }
 
-    const limits = await this.mc(limitCalls)
+    const limits = (await this.mc(limitCalls)) as bigint[]
     const results: (VaultInfo & { limit: StakeBySubnetwork })[] = []
 
     let i = 0
     for (const vault of eligible) {
-      const limit: StakeBySubnetwork = {}
-      for (const subnetId of SUBNETWORK_IDS) {
-        const value = limits[i++]! as bigint
-        if (value > 0n) limit[subnetId] = value
-      }
-      if (Object.keys(limit).length) results.push({ ...vault, limit })
+      const { stake: limit, hasValue, nextOffset } = this.decodeStakeBySubnetwork(limits, i)
+      i = nextOffset
+      if (hasValue) results.push({ ...vault, limit })
     }
 
     return results
@@ -396,10 +428,10 @@ export class SymbioticClient {
     const ops = await this.getNetOps(network)
 
     const stakeCalls: any[] = []
+    const subnetworks = this.subnetworksForNet(network)
     for (const op of ops) {
       for (const vault of vaults) {
-        for (const subnetId of SUBNETWORK_IDS) {
-          const subnetwork = encodeSubnetwork({ net: network, subnetId })
+        for (const subnetwork of subnetworks) {
           stakeCalls.push({
             address: vault.delegator,
             abi: NetworkRestakeDelegatorAbi,
@@ -410,18 +442,15 @@ export class SymbioticClient {
       }
     }
 
-    const stakes = await this.mc(stakeCalls)
+    const stakes = (await this.mc(stakeCalls)) as bigint[]
     const results = ops.map((op) => ({ op, vaults: [] as any[] }))
 
     let i = 0
     for (let opIdx = 0; opIdx < ops.length; opIdx++) {
       for (const vault of vaults) {
-        const stake: StakeBySubnetwork = {}
-        for (const subnetId of SUBNETWORK_IDS) {
-          const value = stakes[i++]! as bigint
-          if (value > 0n) stake[subnetId] = value
-        }
-        if (Object.keys(stake).length) results[opIdx]!.vaults.push({ ...vault, stake })
+        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, i)
+        i = nextOffset
+        if (hasValue) results[opIdx]!.vaults.push({ ...vault, stake })
       }
     }
 
@@ -433,7 +462,7 @@ export class SymbioticClient {
     const ops = await this.getOps()
 
     const calls = ops.map((op) => ({
-      address: this.addresses.op_vault_opt_in,
+      address: this.requireAddress('op_vault_opt_in'),
       abi: OperatorVaultOptInServiceAbi,
       functionName: 'isOptedIn',
       args: [op, v],
@@ -442,37 +471,39 @@ export class SymbioticClient {
     return ops.filter((op, i) => Boolean(optins[i]))
   }
 
-  async getVaultNets(vault: Address): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
-    const v = getAddress(vault)
+  async getVaultNetsByDelegator(delegator: Address): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
     const nets = await this.getNets()
-    const delegator = await this.getVaultDelegator(v)
+    const d = getAddress(delegator)
 
     const calls: any[] = []
     for (const net of nets) {
-      for (const subnetId of SUBNETWORK_IDS) {
-        const subnetwork = encodeSubnetwork({ net: net.net, subnetId })
+      const subnetworks = this.subnetworksForNet(net.net)
+      for (const subnetwork of subnetworks) {
         calls.push({
-          address: delegator,
+          address: d,
           abi: FullRestakeDelegatorAbi,
           functionName: 'maxNetworkLimit',
           args: [subnetwork],
         })
       }
     }
-    const results = await this.mc(calls)
+    const results = (await this.mc(calls)) as bigint[]
 
     const out: Array<{ net: Address; limit: StakeBySubnetwork }> = []
     let i = 0
     for (const net of nets) {
-      const limit: StakeBySubnetwork = {}
-      for (const subnetId of SUBNETWORK_IDS) {
-        const value = results[i++]! as bigint
-        if (value > 0n) limit[subnetId] = value
-      }
-      if (Object.keys(limit).length) out.push({ net: net.net, limit })
+      const { stake: limit, hasValue, nextOffset } = this.decodeStakeBySubnetwork(results, i)
+      i = nextOffset
+      if (hasValue) out.push({ net: net.net, limit })
     }
 
     return out
+  }
+
+  async getVaultNets(vault: Address): Promise<Array<{ net: Address; limit: StakeBySubnetwork }>> {
+    const v = getAddress(vault)
+    const delegator = await this.getVaultDelegator(v)
+    return this.getVaultNetsByDelegator(delegator)
   }
 
   async getVaultNetsOps(vault: Address): Promise<Record<Address, Address[]>> {
@@ -485,7 +516,7 @@ export class SymbioticClient {
     for (const net of vaultNets) {
       for (const op of vaultOps) {
         calls.push({
-          address: this.addresses.op_net_opt_in,
+          address: this.requireAddress('op_net_opt_in'),
           abi: OperatorNetworkOptInServiceAbi,
           functionName: 'isOptedIn',
           args: [op, net.net],
@@ -504,14 +535,14 @@ export class SymbioticClient {
   }
 
   async getVaultNetsOpsFull(vaultInfo: VaultInfo): Promise<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>> {
-    const nets = await this.getVaultNets(vaultInfo.vault)
+    const nets = await this.getVaultNetsByDelegator(vaultInfo.delegator)
     const ops = await this.getVaultOps(vaultInfo.vault)
 
     const calls: any[] = []
     for (const net of nets) {
+      const subnetworks = this.subnetworksForNet(net.net)
       for (const op of ops) {
-        for (const subnetId of SUBNETWORK_IDS) {
-          const subnetwork = encodeSubnetwork({ net: net.net, subnetId })
+        for (const subnetwork of subnetworks) {
           calls.push({
             address: vaultInfo.delegator,
             abi: NetworkRestakeDelegatorAbi,
@@ -522,18 +553,15 @@ export class SymbioticClient {
       }
     }
 
-    const stakes = await this.mc(calls)
+    const stakes = (await this.mc(calls)) as bigint[]
     const out = nets.map((n) => ({ net: n.net, ops: [] as Array<{ op: Address; stake: StakeBySubnetwork }> }))
 
     let i = 0
     for (let netIdx = 0; netIdx < nets.length; netIdx++) {
       for (const op of ops) {
-        const stake: StakeBySubnetwork = {}
-        for (const subnetId of SUBNETWORK_IDS) {
-          const value = stakes[i++]! as bigint
-          if (value > 0n) stake[subnetId] = value
-        }
-        if (Object.keys(stake).length) out[netIdx]!.ops.push({ op, stake })
+        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, i)
+        i = nextOffset
+        if (hasValue) out[netIdx]!.ops.push({ op, stake })
       }
     }
 
@@ -551,9 +579,9 @@ export class SymbioticClient {
     for (const net of nets) {
       const vaults = await this.getNetVaults(net.net)
       netVaults.set(net.net, vaults)
+      const subnetworks = this.subnetworksForNet(net.net)
       for (const vault of vaults) {
-        for (const subnetId of SUBNETWORK_IDS) {
-          const subnetwork = encodeSubnetwork({ net: net.net, subnetId })
+        for (const subnetwork of subnetworks) {
           stakeCalls.push({
             address: vault.delegator,
             abi: NetworkRestakeDelegatorAbi,
@@ -564,7 +592,7 @@ export class SymbioticClient {
       }
     }
 
-    const stakes = await this.mc(stakeCalls)
+    const stakes = (await this.mc(stakeCalls)) as bigint[]
     const out = nets.map((n) => ({ net: n.net, vaults: [] as any[] }))
 
     let i = 0
@@ -572,12 +600,9 @@ export class SymbioticClient {
       const netAddr = nets[netIdx]!.net
       const vaults = netVaults.get(netAddr) ?? []
       for (const vault of vaults) {
-        const stake: StakeBySubnetwork = {}
-        for (const subnetId of SUBNETWORK_IDS) {
-          const value = stakes[i++]! as bigint
-          if (value > 0n) stake[subnetId] = value
-        }
-        if (Object.keys(stake).length) out[netIdx]!.vaults.push({ ...vault, stake })
+        const { stake, hasValue, nextOffset } = this.decodeStakeBySubnetwork(stakes, i)
+        i = nextOffset
+        if (hasValue) out[netIdx]!.vaults.push({ ...vault, stake })
       }
     }
 
@@ -587,7 +612,7 @@ export class SymbioticClient {
   async isNet(address: Address): Promise<boolean> {
     const isNet = await this.read<boolean>({
       abi: NetworkRegistryAbi,
-      address: this.addresses.net_registry,
+      address: this.requireAddress('net_registry'),
       functionName: 'isEntity',
       args: [getAddress(address)],
     })
@@ -597,7 +622,7 @@ export class SymbioticClient {
   async isOp(address: Address): Promise<boolean> {
     const isOp = await this.read<boolean>({
       abi: OperatorRegistryAbi,
-      address: this.addresses.op_registry,
+      address: this.requireAddress('op_registry'),
       functionName: 'isEntity',
       args: [getAddress(address)],
     })
@@ -607,7 +632,7 @@ export class SymbioticClient {
   async isVault(address: Address): Promise<boolean> {
     const isVault = await this.read<boolean>({
       abi: VaultFactoryAbi,
-      address: this.addresses.vault_factory,
+      address: this.requireAddress('vault_factory'),
       functionName: 'isEntity',
       args: [getAddress(address)],
     })
@@ -617,7 +642,7 @@ export class SymbioticClient {
   async isOptedInVault(operator: Address, vault: Address): Promise<boolean> {
     const res = await this.read<boolean>({
       abi: OperatorVaultOptInServiceAbi,
-      address: this.addresses.op_vault_opt_in,
+      address: this.requireAddress('op_vault_opt_in'),
       functionName: 'isOptedIn',
       args: [getAddress(operator), getAddress(vault)],
     })
@@ -627,7 +652,7 @@ export class SymbioticClient {
   async isOptedInNet(operator: Address, net: Address): Promise<boolean> {
     const res = await this.read<boolean>({
       abi: OperatorNetworkOptInServiceAbi,
-      address: this.addresses.op_net_opt_in,
+      address: this.requireAddress('op_net_opt_in'),
       functionName: 'isOptedIn',
       args: [getAddress(operator), getAddress(net)],
     })
@@ -740,14 +765,18 @@ export class SymbioticClient {
     })
   }
 
-  async getStake(vault: Address, subnetwork: Hex, operator: Address): Promise<bigint> {
-    const delegator = await this.getVaultDelegator(vault)
+  async getStakeByDelegator(delegator: Address, subnetwork: Hex, operator: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: NetworkRestakeDelegatorAbi,
-      address: delegator,
+      address: getAddress(delegator),
       functionName: 'stake',
       args: [subnetwork, getAddress(operator)],
     })
+  }
+
+  async getStake(vault: Address, subnetwork: Hex, operator: Address): Promise<bigint> {
+    const delegator = await this.getVaultDelegator(vault)
+    return this.getStakeByDelegator(delegator, subnetwork, operator)
   }
 
   async getAllowance(token: Address, owner: Address, spender: Address): Promise<bigint> {
@@ -790,7 +819,7 @@ export class SymbioticClient {
   async getOperatorNetworkOptInNonce(who: Address, where: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: OperatorNetworkOptInServiceAbi,
-      address: this.addresses.op_net_opt_in,
+      address: this.requireAddress('op_net_opt_in'),
       functionName: 'nonces',
       args: [getAddress(who), getAddress(where)],
     })
@@ -799,9 +828,74 @@ export class SymbioticClient {
   async getOperatorVaultOptInNonce(who: Address, where: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: OperatorVaultOptInServiceAbi,
-      address: this.addresses.op_vault_opt_in,
+      address: this.requireAddress('op_vault_opt_in'),
       functionName: 'nonces',
       args: [getAddress(who), getAddress(where)],
+    })
+  }
+
+  // RewardsV2 (optional)
+  async getCurator(vault: Address): Promise<Address> {
+    const curator = await this.read<Address>({
+      abi: CuratorRegistryAbi,
+      address: this.requireAddress('curator_registry'),
+      functionName: 'getCurator',
+      args: [getAddress(vault)],
+    })
+    return getAddress(curator)
+  }
+
+  async getOperatorsFee(vault: Address, network: Address): Promise<bigint> {
+    return this.read<bigint>({
+      abi: FeeRegistryAbi,
+      address: this.requireAddress('fee_registry'),
+      functionName: 'getOperatorsFee',
+      args: [getAddress(vault), getAddress(network)],
+    })
+  }
+
+  async getCuratorFee(vault: Address, network: Address): Promise<bigint> {
+    return this.read<bigint>({
+      abi: FeeRegistryAbi,
+      address: this.requireAddress('fee_registry'),
+      functionName: 'getCuratorFee',
+      args: [getAddress(vault), getAddress(network)],
+    })
+  }
+
+  async protocolFee(rewardsType: bigint, network: Address): Promise<bigint> {
+    return this.read<bigint>({
+      abi: ProtocolFeesAbi,
+      address: this.requireAddress('rewards'),
+      functionName: 'protocolFee',
+      args: [rewardsType, getAddress(network)],
+    })
+  }
+
+  async curatorFees(vault: Address, token: Address): Promise<bigint> {
+    return this.read<bigint>({
+      abi: VaultSnapshotRewardsAbi,
+      address: this.requireAddress('rewards'),
+      functionName: 'curatorFees',
+      args: [getAddress(vault), getAddress(token)],
+    })
+  }
+
+  async lastUnclaimedReward(account: Address, vault: Address, network: Address, token: Address): Promise<bigint> {
+    return this.read<bigint>({
+      abi: VaultSnapshotRewardsAbi,
+      address: this.requireAddress('rewards'),
+      functionName: 'lastUnclaimedReward',
+      args: [getAddress(account), getAddress(vault), getAddress(network), getAddress(token)],
+    })
+  }
+
+  async lastUnclaimedOperatorReward(account: Address, vault: Address, network: Address, token: Address): Promise<bigint> {
+    return this.read<bigint>({
+      abi: VaultSnapshotRewardsAbi,
+      address: this.requireAddress('rewards'),
+      functionName: 'lastUnclaimedOperatorReward',
+      args: [getAddress(account), getAddress(vault), getAddress(network), getAddress(token)],
     })
   }
 

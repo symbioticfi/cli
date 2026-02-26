@@ -3,18 +3,9 @@ import type { Command } from 'commander'
 import type { CliContext } from '../cli/context'
 import { parseAddress } from '../cli/parse'
 import { runCliAction } from '../cli/run'
+import { groupBy } from '../core/format'
 import { printIndented, printJson, printLine } from '../core/output'
 import { formatTokenAmount } from '../core/units'
-
-function groupByCollateral<T extends { collateral: string }>(items: T[]) {
-  const out = new Map<string, T[]>()
-  for (const item of items) {
-    const list = out.get(item.collateral) ?? []
-    list.push(item)
-    out.set(item.collateral, list)
-  }
-  return out
-}
 
 export function registerNetworkReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
@@ -131,7 +122,7 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
         for (const op of opsVaults) {
           printIndented(`Operator: ${op.op}`, 2)
 
-          const byCollateral = groupByCollateral(op.vaults)
+          const byCollateral = groupBy(op.vaults, (v) => v.collateral)
           let totalOpStakeStr = ''
 
           for (const [collateral, vaults] of byCollateral.entries()) {
@@ -170,4 +161,3 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
       }),
     )
 }
-

@@ -2,9 +2,10 @@ import type { Command } from 'commander'
 
 import type { CliContext } from '../cli/context'
 import { parseAddress, parseUint256, parseUint96 } from '../cli/parse'
-import { resolveSigningAccount } from '../cli/signing'
+import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import { confirmOrExit } from '../core/confirm'
+import { formatPercent } from '../core/format'
 import {
   FullRestakeDelegatorAbi,
   NetworkRestakeDelegatorAbi,
@@ -13,7 +14,7 @@ import {
 } from '../core/contracts'
 import { printJson, printLine } from '../core/output'
 import { encodeSubnetwork } from '../core/subnetwork'
-import { createWalletClientForAccount, sendWriteRequest, simulateWriteRequest } from '../core/tx'
+import { runWriteTx } from '../core/tx'
 
 import { withWriteOptions } from './writeOptions'
 
@@ -32,14 +33,6 @@ function delegatorAbiByType(type: bigint) {
   if (type === 2n) return OperatorSpecificDelegatorAbi
   if (type === 3n) return OperatorNetworkSpecificDelegatorAbi
   return NetworkRestakeDelegatorAbi
-}
-
-function percentString(numerator: bigint, denominator: bigint) {
-  if (denominator === 0n) return '0'
-  const bp = (numerator * 10_000n) / denominator
-  const whole = bp / 100n
-  const frac = (bp % 100n).toString().padStart(2, '0')
-  return `${whole}.${frac}`
 }
 
 export function registerCuratorWriteCommands(program: Command, getCtx: () => Promise<CliContext>) {
@@ -67,35 +60,21 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
         return
       }
 
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
+      await withSigningAccount(opts, async ({ account }) => {
         const subnetwork = encodeSubnetwork({ net, subnetId })
-        const request = await simulateWriteRequest({
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: delegatorAbiByType(delegatorType),
           address: delegator,
           functionName: 'setNetworkLimit',
           args: [subnetwork, lim],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully set limit = ${lim} for subnetwork = ${subnetwork}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully set limit = ${lim} for subnetwork = ${subnetwork}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -125,35 +104,21 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
         return
       }
 
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
+      await withSigningAccount(opts, async ({ account }) => {
         const subnetwork = encodeSubnetwork({ net, subnetId })
-        const request = await simulateWriteRequest({
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: FullRestakeDelegatorAbi,
           address: delegator,
           functionName: 'setOperatorNetworkLimit',
           args: [subnetwork, op, lim],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully set limit = ${lim} for operator = ${op} in subnetwork = ${subnetwork}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully set limit = ${lim} for operator = ${op} in subnetwork = ${subnetwork}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -187,7 +152,7 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
       const currentShares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
       const totalShares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
       const newTotal = totalShares - currentShares + sh
-      const percentage = percentString(sh, newTotal)
+      const percentage = formatPercent(sh, newTotal)
 
       const ok = await confirmOrExit({
         yes: opts.yes,
@@ -195,34 +160,20 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
       })
       if (!ok) return
 
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: NetworkRestakeDelegatorAbi,
           address: delegator,
           functionName: 'setOperatorNetworkShares',
           args: [subnetwork, op, sh],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully set shares = ${sh} for operator = ${op} in subnetwork = ${subnetwork}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully set shares = ${sh} for operator = ${op} in subnetwork = ${subnetwork}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 }

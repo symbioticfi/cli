@@ -2,6 +2,7 @@
   "name": "symb",
   "version": "0.0.0",
   "private": true,
+  "packageManager": "pnpm@10.29.3",
   "type": "module",
   "bin": {
     "symb": "dist/index.js"

@@ -11,12 +11,26 @@ Can be found [here](https://docs.symbiotic.fi/guides/cli).
 ## Prerequisites
 
 - Node >= 20
-- pnpm
-
-Legacy (Python CLI):
-- Python >= 3.8
+- pnpm (optional; the installer will enable it via `corepack` if missing)
 
 ## Install
+
+### Quick Install (macOS/Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/symbioticfi/cli/main/install.sh | bash
+symb --help
+symb ops
+```
+
+Requirements:
+
+- Node >= 20
+- pnpm (the installer will enable it via `corepack` if missing)
+
+By default, this installs into `~/.symb/cli` and adds `~/.symb/bin` to your `PATH` (shell profile).
+
+### Local Install (repo)
 
 ```bash
 pnpm install
@@ -24,128 +38,133 @@ pnpm install
 
 ## Usage
 
-### TypeScript + viem CLI (recommended)
+### CLI
 
 ```bash
 # Help
-pnpm dev -- --help
+symb --help
 
-# Build
-pnpm build
-
-# Run built CLI
-node dist/index.js --help
+# Example
+symb ops
 ```
 
-RPC + chain selection:
+### Development (repo)
 
 ```bash
-node dist/index.js --chain mainnet nets
-node dist/index.js --chain 17000 --provider https://ethereum-holesky-rpc.publicnode.com nets
+pnpm dev -- --help
+pnpm build
+./dist/index.js --help
 ```
 
 Write/signature commands require a signer:
+
 - `--private-key <hex>` (discouraged) or `SYMB_PRIVATE_KEY`.
 - Ledger: `--ledger` (optionally `--ledger-path`, `--ledger-address`).
 
 Ledger troubleshooting:
+
 - If Ledger transport fails due to native deps not being built, run `pnpm approve-builds` and then `pnpm install`.
 
 Common env vars:
+
 - `SYMB_RPC_URL`
 - `SYMB_PRIVATE_KEY`
 - `SYMB_ADDRESSES_JSON` (JSON object with deployed addresses overrides)
 
-### Legacy Python CLI
+If `SYMB_RPC_URL`/`--rpc` is not provided, the CLI uses a built-in fallback list of public RPC endpoints for the selected chain.
 
-```bash
-pip3 install -r requirements.txt
-python3 symb.py --help
-```
+## Commands
 
-```
-$ python3 symb.py
-Usage: symb.py [GENERAL_OPTIONS] COMMAND [ARGS] [OPTIONS]
+### Read Commands
 
-General options:
-  --help                         Show all the possible commands and exit.
-  --chain                  TEXT  Chain ID to use.
-  --provider               TEXT  Ethereum provider URL [http(s)].
+Networks:
 
-Commands:
-  --- for general use (related to Networks) ---
+- `isnet` - Check if address is network.
+- `middleware` - Get network middleware address.
+- `nets` - List all networks.
+- `netops` - List all operators opted in network.
+- `netstakes` - Show stakes of all operators in network.
 
-  isnet                          Check if address is network.
-  middleware                     Get network middleware address.
-  nets                           List all networks.
-  netops                         List all operators opted in network.
-  netstakes                      Show stakes of all operators in network.
-  max-network-limit              Get a maximum network limit at the vault's delegator.
-  network-limit                  Get a network limit at the vault's delegator.
-  pending-resolver               Get a current resolver for a subnetwork in a vault.
-  resolver                       Get a pending resolver for a subnetwork in a vault.
+Operators:
 
-  --- for general use (related to Operators) ---
+- `isop` - Check if address is operator.
+- `ops` - List all operators.
+- `op-vault-net-stake` - Get operator stake in vault for network (includes shares for NetworkRestakeDelegator).
+- `opnets` - List all networks where operator is opted in.
+- `opstakes` - Show operator stakes in all networks.
+- `check-opt-in-vault` - Check if operator is opted in to a vault.
+- `check-opt-in-network` - Check if operator is opted in to a network.
 
-  isop                           Check if address is operator.
-  ops                            List all operators.
-  opnets                         List all networks where operator is opted in.
-  op-vault-net-stake             Get operator stake in vault for network (includes data about the operator's shares if NetworkRestakeDelegator).
-  opstakes                       Show operator stakes in all networks.
-  check-opt-in-network           Check if operator is opted in to a network.
-  check-opt-in-vault             Check if is opted in to a vault.
-  operator-network-limit         Get an operator-network limit at the vault's delegator.
-  operator-network-shares        Get operator-network shares at the vault's delegator.
-  total-operator-network-shares  Get total operator-network shares at the vault's delegator.
+Vaults:
 
-  --- for general use (related to Vaults) ---
+- `isvault` - Check if address is vault.
+- `vaults` - List all vaults.
+- `vaultops` - List all operators opted into the given vault.
+- `vaultnets` - List all networks associated with the given vault.
+- `vaultnetsops` - List all operators and their associated networks for the given vault.
 
-  isvault                        Check if address is vault.
-  vaults                         List all vaults.
-  vaultnets                      List all networks associated with the given vault.
-  vaultops                       List all operators opted into the given vault.
-  vaultnetsops                   List all operators and their associated networks for the given vault.
+Stakers:
 
-  --- for general use (related to Stakers) ---
+- `active-balance-of` - Get an active balance of a given account at a particular vault.
+- `withdrawals-of` - Get some epoch's withdrawals of a given account at a particular vault.
+- `withdrawals-claimed` - Check if some epoch's withdrawals of a given account at a particular vault are claimed.
 
-  active-balance-of              Get an active balance of a given account at a particular vault.
-  withdrawals-of                 Get some epoch's withdrawals of a given account at a particular vault.
-  withdrawals-claimed            Check if some epoch's withdrawals of a given account at a particular vault are claimed.
+Limits:
 
-  --- for Networks ---
+- `max-network-limit` - Get a maximum network limit at the vault's delegator.
+- `resolver` - Get a current resolver for a subnetwork in a vault.
+- `pending-resolver` - Get a pending resolver for a subnetwork in a vault.
+- `network-limit` - Get a network limit at the vault's delegator.
+- `operator-network-limit` - Get an operator-network limit at the vault's delegator.
+- `operator-network-shares` - Get operator-network shares at the vault's delegator.
+- `total-operator-network-shares` - Get total operator-network shares at the vault's delegator.
 
-  register-network               Register the signer as a network.
-  set-max-network-limit          Set a maximum network limit at the vault's delegator.
-  set-resolver                   Set a resolver for a subnetwork at VetoSlasher.
+RewardsV2:
 
-  --- for Operators ---
+- `curator` - Get the curator address for a vault.
+- `operators-fee` - Get effective operators fee for a vault+network.
+- `curator-fee` - Get effective curator fee for a vault+network.
+- `rewards-protocol-fee` - Get protocol fee for a rewards type and network.
+- `vault-snapshot-curator-fees` - Get claimable curator fees (amount) for a vault+token .
 
-  register-operator              Register the signer as an operator.
-  opt-in-network                 Opt-in to a network.
-  opt-in-network-signature       Get a signature for opt-in to a network.
-  opt-in-vault                   Opt-in to a vault.
-  opt-in-vault-signature         Get a signature for opt-in to a vault.
-  opt-out-network                Opt-out from a network.
-  opt-out-network-signature      Get a signature for opt-out from a network.
-  opt-out-vault                  Opt-out from a vault.
-  opt-out-vault-signature        Get a signature for opt-out from a vault.
+### Write/Sign Commands
 
-  --- for Vault Curators ---
+Networks:
 
-  set-network-limit              Set a network limit at the vault's delegator.
-  set-operator-network-limit     Set an operator-network limit at the vault's delegator.
-  set-operator-network-shares    Set an operator-network shares at the vault's delegator.
+- `register-network` - Register the signer as a network.
+- `set-max-network-limit` - Set a maximum network limit at the vault's delegator.
+- `set-resolver` - Set a resolver for a subnetwork at VetoSlasher.
 
-  --- for Stakers ---
+Operators:
 
-  deposit                        Deposit to the vault.
-  withdraw                       Withdraw from the vault.
-  claim                          Claim a withdrawal for some epoch at the vault.
+- `register-operator` - Register the signer as an operator.
+- `opt-in-vault` - Opt-in to a vault.
+- `opt-out-vault` - Opt-out from a vault.
+- `opt-in-network` - Opt-in to a network.
+- `opt-out-network` - Opt-out from a network.
+- `opt-in-vault-signature` - Get a signature for opt-in to a vault.
+- `opt-out-vault-signature` - Get a signature for opt-out from a vault.
+- `opt-in-network-signature` - Get a signature for opt-in to a network.
+- `opt-out-network-signature` - Get a signature for opt-out from a network.
 
+Vault Curators:
 
-Options:
-  --help                         Show the command's description and exit.
-  --private-key            TEXT  Private key to sign transactions with (only for write functionality).
-  --ledger                       Flag if to use a ledger to sign transactions (only for write functionality).
-  --ledger-address         TEXT  Address of the ledger's account to use to sign transactions (only for write functionality).
-```
+- `set-network-limit` - Set a network limit at the vault's delegator.
+- `set-operator-network-limit` - Set an operator-network limit at the vault's delegator.
+- `set-operator-network-shares` - Set an operator-network shares at the vault's delegator.
+
+Stakers:
+
+- `withdraw` - Withdraw from the vault.
+- `claim` - Claim a withdrawal for some epoch at the vault.
+
+RewardsV2:
+
+- `set-curator` - Set curator for a vault (RewardsV2 CuratorRegistry).
+- `set-operators-fee` - Set default operators fee (ppm) for a vault (RewardsV2 FeeRegistry).
+- `set-operators-network-fee` - Set network-specific operators fee (ppm) for a vault (RewardsV2 FeeRegistry).
+- `set-curator-fee` - Set default curator fee (ppm) for a vault (RewardsV2 FeeRegistry).
+- `set-curator-network-fee` - Set network-specific curator fee (ppm) for a vault (RewardsV2 FeeRegistry).
+- `claim-vault-snapshot-rewards` - Claim vault snapshot rewards for the signer (RewardsV2 Rewards).
+- `claim-operator-fees` - Claim vault snapshot operator fees for the signer (RewardsV2 Rewards).
+- `claim-curator-fees` - Claim vault snapshot curator fees for the signer curator (RewardsV2 Rewards).

@@ -33,3 +33,15 @@ export async function resolveSigningAccount(
   const account = accountFromPrivateKey(pk) as PrivateKeyAccount
   return { account, address: account.address, close: async () => {} }
 }
+
+export async function withSigningAccount<T>(
+  flags: SigningFlags,
+  fn: (args: { account: Account; address: Address }) => Promise<T>,
+): Promise<T> {
+  const { account, address, close } = await resolveSigningAccount(flags)
+  try {
+    return await fn({ account, address })
+  } finally {
+    await close()
+  }
+}

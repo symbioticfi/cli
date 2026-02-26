@@ -5,27 +5,10 @@ import type { CliContext } from '../cli/context'
 import { parseAddress } from '../cli/parse'
 import { runCliAction } from '../cli/run'
 import { SUBNETWORK_IDS } from '../core/constants'
+import { formatPercent, groupBy } from '../core/format'
 import { printIndented, printJson, printLine } from '../core/output'
 import { encodeSubnetwork } from '../core/subnetwork'
 import { formatTokenAmount } from '../core/units'
-
-function percentString(numerator: bigint, denominator: bigint) {
-  if (denominator === 0n) return '0'
-  const bp = (numerator * 10_000n) / denominator // basis points
-  const whole = bp / 100n
-  const frac = (bp % 100n).toString().padStart(2, '0')
-  return `${whole}.${frac}`
-}
-
-function groupByCollateral<T extends { collateral: string }>(items: T[]) {
-  const out = new Map<string, T[]>()
-  for (const item of items) {
-    const list = out.get(item.collateral) ?? []
-    list.push(item)
-    out.set(item.collateral, list)
-  }
-  return out
-}
 
 export function registerOperatorReadCommands(program: Command, getCtx: () => Promise<CliContext>) {
   program
@@ -77,18 +60,18 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
           const perSubnet = []
           for (const subnetId of SUBNETWORK_IDS) {
             const subnetwork = encodeSubnetwork({ net, subnetId })
-            const stake = await ctx.symb.getStake(vault, subnetwork, op)
+            const stake = await ctx.symb.getStakeByDelegator(delegator, subnetwork, op)
 
             let shares: { operatorNetworkShares: bigint; totalOperatorNetworkShares: bigint; percent: string } | undefined
-            if (delegatorType === 0n) {
-              const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
-              const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
-              shares = {
-                operatorNetworkShares,
-                totalOperatorNetworkShares,
-                percent: percentString(operatorNetworkShares, totalOperatorNetworkShares),
+              if (delegatorType === 0n) {
+                const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
+                const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
+                shares = {
+                  operatorNetworkShares,
+                  totalOperatorNetworkShares,
+                  percent: formatPercent(operatorNetworkShares, totalOperatorNetworkShares),
+                }
               }
-            }
 
             perSubnet.push({ subnetId, subnetwork, stake, stakeFormatted: formatTokenAmount(stake, tokenMeta), shares })
           }
@@ -100,13 +83,13 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
 
         for (const subnetId of SUBNETWORK_IDS) {
           const subnetwork = encodeSubnetwork({ net, subnetId })
-          const stake = await ctx.symb.getStake(vault, subnetwork, op)
+          const stake = await ctx.symb.getStakeByDelegator(delegator, subnetwork, op)
           const stakeNormalized = formatTokenAmount(stake, tokenMeta)
 
           if (delegatorType === 0n) {
             const operatorNetworkShares = await ctx.symb.getOperatorNetworkShares(delegator, subnetwork, op)
             const totalOperatorNetworkShares = await ctx.symb.getTotalOperatorNetworkShares(delegator, subnetwork)
-            const percent = percentString(operatorNetworkShares, totalOperatorNetworkShares)
+            const percent = formatPercent(operatorNetworkShares, totalOperatorNetworkShares)
             printLine(
               `for subnetwork = ${subnetwork} is ${stakeNormalized} ${tokenMeta.symbol}\nwhich is ${percent}% (${operatorNetworkShares} / ${totalOperatorNetworkShares} in shares) of network stake`,
             )
@@ -152,11 +135,11 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
 
         const totalStakes = new Map<string, bigint>()
 
-        for (const net of netsVaults) {
-          printIndented(`Network: ${net.net}`, 2)
+          for (const net of netsVaults) {
+            printIndented(`Network: ${net.net}`, 2)
 
-          const byCollateral = groupByCollateral(net.vaults)
-          let totalNetStakeStr = ''
+            const byCollateral = groupBy(net.vaults, (v) => v.collateral)
+            let totalNetStakeStr = ''
 
           for (const [collateral, vaults] of byCollateral.entries()) {
             const meta = await ctx.symb.getTokenMeta(parseAddress(collateral))
@@ -236,4 +219,3 @@ export function registerOperatorReadCommands(program: Command, getCtx: () => Pro
       }),
     )
 }
-

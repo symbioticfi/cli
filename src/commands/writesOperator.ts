@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 
 import type { CliContext } from '../cli/context'
 import { parseAddress, parseUint48 } from '../cli/parse'
-import { resolveSigningAccount } from '../cli/signing'
+import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import {
   OperatorNetworkOptInServiceAbi,
@@ -11,7 +11,7 @@ import {
 } from '../core/contracts'
 import { printJson, printLine } from '../core/output'
 import { formatUnixTimestampSeconds } from '../core/time'
-import { createWalletClientForAccount, sendWriteRequest, simulateWriteRequest } from '../core/tx'
+import { runWriteTx } from '../core/tx'
 import {
   buildOperatorNetworkOptInTypedData,
   buildOperatorNetworkOptOutTypedData,
@@ -43,33 +43,19 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
   ).action((opts: WriteOpts) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: OperatorRegistryAbi,
           address: ctx.resolved.addresses.op_registry,
           functionName: 'registerOperator',
+          dryRun: opts.dryRun,
+          successMessage: 'Successfully registered as an operator',
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine('Successfully registered as an operator')
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -82,34 +68,20 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     runCliAction(async () => {
       const ctx = await getCtx()
       const vault = parseAddress(vaultAddress)
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: OperatorVaultOptInServiceAbi,
           address: ctx.resolved.addresses.op_vault_opt_in,
           functionName: 'optIn',
           args: [vault],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully opted in to vault = ${vault}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully opted in to vault = ${vault}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -122,34 +94,20 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     runCliAction(async () => {
       const ctx = await getCtx()
       const vault = parseAddress(vaultAddress)
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: OperatorVaultOptInServiceAbi,
           address: ctx.resolved.addresses.op_vault_opt_in,
           functionName: 'optOut',
           args: [vault],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully opted out from vault = ${vault}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully opted out from vault = ${vault}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -162,34 +120,20 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     runCliAction(async () => {
       const ctx = await getCtx()
       const net = parseAddress(networkAddress)
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: OperatorNetworkOptInServiceAbi,
           address: ctx.resolved.addresses.op_net_opt_in,
           functionName: 'optIn',
           args: [net],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully opted in to network = ${net}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully opted in to network = ${net}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -202,34 +146,20 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
     runCliAction(async () => {
       const ctx = await getCtx()
       const net = parseAddress(networkAddress)
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: OperatorNetworkOptInServiceAbi,
           address: ctx.resolved.addresses.op_net_opt_in,
           functionName: 'optOut',
           args: [net],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully opted out from network = ${net}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully opted out from network = ${net}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -245,8 +175,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const vault = parseAddress(vaultAddress)
       const dur = parseUint48(duration)
 
-      const { account, address: who, close } = await resolveSigningAccount(opts)
-      try {
+      await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_vault_opt_in
 
         const nonce = await ctx.symb.getOperatorVaultOptInNonce(who, vault)
@@ -266,7 +195,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
-          return printJson({ operator: who, vault, nonce, deadline: deadline.toString(), signature })
+          return printJson({ operator: who, vault, nonce, deadline, signature })
         }
 
         printLine('')
@@ -275,9 +204,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         printLine(`Nonce: ${nonce}`)
         printLine(`Deadline: ${deadline} (${formatUnixTimestampSeconds(deadline)})`)
         printLine(`Success! Your signature is: ${signature}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -293,8 +220,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const vault = parseAddress(vaultAddress)
       const dur = parseUint48(duration)
 
-      const { account, address: who, close } = await resolveSigningAccount(opts)
-      try {
+      await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_vault_opt_in
 
         const nonce = await ctx.symb.getOperatorVaultOptInNonce(who, vault)
@@ -314,7 +240,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
-          return printJson({ operator: who, vault, nonce, deadline: deadline.toString(), signature })
+          return printJson({ operator: who, vault, nonce, deadline, signature })
         }
 
         printLine('')
@@ -323,9 +249,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         printLine(`Nonce: ${nonce}`)
         printLine(`Deadline: ${deadline} (${formatUnixTimestampSeconds(deadline)})`)
         printLine(`Success! Your signature is: ${signature}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -341,8 +265,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const net = parseAddress(networkAddress)
       const dur = parseUint48(duration)
 
-      const { account, address: who, close } = await resolveSigningAccount(opts)
-      try {
+      await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_net_opt_in
 
         const nonce = await ctx.symb.getOperatorNetworkOptInNonce(who, net)
@@ -362,7 +285,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
-          return printJson({ operator: who, network: net, nonce, deadline: deadline.toString(), signature })
+          return printJson({ operator: who, network: net, nonce, deadline, signature })
         }
 
         printLine('')
@@ -371,9 +294,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         printLine(`Nonce: ${nonce}`)
         printLine(`Deadline: ${deadline} (${formatUnixTimestampSeconds(deadline)})`)
         printLine(`Success! Your signature is: ${signature}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -389,8 +310,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const net = parseAddress(networkAddress)
       const dur = parseUint48(duration)
 
-      const { account, address: who, close } = await resolveSigningAccount(opts)
-      try {
+      await withSigningAccount(opts, async ({ account, address: who }) => {
         const verifyingContract = ctx.resolved.addresses.op_net_opt_in
 
         const nonce = await ctx.symb.getOperatorNetworkOptInNonce(who, net)
@@ -410,7 +330,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         const signature = await signTypedData(typedData as any)
 
         if (ctx.json) {
-          return printJson({ operator: who, network: net, nonce, deadline: deadline.toString(), signature })
+          return printJson({ operator: who, network: net, nonce, deadline, signature })
         }
 
         printLine('')
@@ -419,9 +339,7 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
         printLine(`Nonce: ${nonce}`)
         printLine(`Deadline: ${deadline} (${formatUnixTimestampSeconds(deadline)})`)
         printLine(`Success! Your signature is: ${signature}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 }

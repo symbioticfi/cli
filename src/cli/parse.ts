@@ -42,3 +42,8 @@ export function parseBytes32Hex(value: string): Hex {
   return hex as Hex
 }
 
+export function parseHex(value: string): Hex {
+  const hex = value.startsWith('0x') ? value : `0x${value}`
+  if (!isHex(hex)) throw new Error(`Invalid hex: ${value}`)
+  return hex as Hex
+}

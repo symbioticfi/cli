@@ -2,14 +2,14 @@ import type { Command } from 'commander'
 
 import type { CliContext } from '../cli/context'
 import { parseAddress, parseUint256, parseUint96 } from '../cli/parse'
-import { resolveSigningAccount } from '../cli/signing'
+import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import { confirmOrExit } from '../core/confirm'
 import { NetworkRegistryAbi, NetworkRestakeDelegatorAbi, VetoSlasherAbi } from '../core/contracts'
 import { printJson, printLine } from '../core/output'
 import { encodeSubnetwork } from '../core/subnetwork'
 import { formatUnixTimestampSeconds } from '../core/time'
-import { createWalletClientForAccount, sendWriteRequest, simulateWriteRequest } from '../core/tx'
+import { runWriteTx } from '../core/tx'
 
 import { withWriteOptions } from './writeOptions'
 
@@ -30,33 +30,19 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
   ).action((opts: WriteOpts) =>
     runCliAction(async () => {
       const ctx = await getCtx()
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: NetworkRegistryAbi,
           address: ctx.resolved.addresses.net_registry,
           functionName: 'registerNetwork',
+          dryRun: opts.dryRun,
+          successMessage: 'Successfully registered as a network',
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine('Successfully registered as a network')
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -74,36 +60,22 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
       const max = parseUint256(maxLimit)
       const subnetId = parseUint96(subnetworkId)
 
-      const { account, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
+      const delegator = await ctx.symb.getVaultDelegator(vault)
 
-        const delegator = await ctx.symb.getVaultDelegator(vault)
-
-        const request = await simulateWriteRequest({
+      await withSigningAccount(opts, async ({ account }) => {
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: NetworkRestakeDelegatorAbi,
           address: delegator,
           functionName: 'setMaxNetworkLimit',
           args: [subnetId, max],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully set max limit = ${max} in vault = ${vault}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully set max limit = ${max} in vault = ${vault}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 
@@ -121,10 +93,7 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
       const resolver = parseAddress(resolverAddress)
       const subnetId = parseUint96(subnetworkId)
 
-      const { account, address: signer, close } = await resolveSigningAccount(opts)
-      try {
-        const walletClient = createWalletClientForAccount(ctx.resolved, account)
-
+      await withSigningAccount(opts, async ({ account, address: signer }) => {
         const slasher = await ctx.symb.getVaultSlasher(vault)
         const slasherType = await ctx.symb.getEntityType(slasher)
         if (slasherType !== 1n) {
@@ -150,30 +119,19 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
           if (!ok) return
         }
 
-        const request = await simulateWriteRequest({
+        await runWriteTx({
+          mode: ctx,
+          resolved: ctx.resolved,
           publicClient: ctx.publicClient,
           account,
           abi: VetoSlasherAbi,
           address: slasher,
           functionName: 'setResolver',
           args: [subnetId, resolver, '0x'],
+          dryRun: opts.dryRun,
+          successMessage: `Successfully set resolver = ${resolver} for subnetwork = ${subnetwork} at vault = ${vault}`,
         })
-
-        if (opts.dryRun) {
-          if (ctx.json) return printJson({ dryRun: true })
-          printLine('Simulated successfully.')
-          return
-        }
-
-        const hash = await sendWriteRequest({ walletClient, request })
-        printLine(`Transaction sent: ${hash}, waiting...`)
-        await ctx.publicClient.waitForTransactionReceipt({ hash })
-
-        if (ctx.json) return printJson({ hash })
-        printLine(`Successfully set resolver = ${resolver} for subnetwork = ${subnetwork} at vault = ${vault}`)
-      } finally {
-        await close()
-      }
+      })
     }),
   )
 }

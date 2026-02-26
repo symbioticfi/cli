@@ -1,0 +1,593 @@
+[
+    {
+        "type": "function",
+        "name": "balance",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "claimCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "recipient",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "leaf",
+                "type": "tuple",
+                "internalType": "struct ICumulativeMerkleRewards.CumulativeDistributionLeaf",
+                "components": [
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "rewardeeType",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    },
+                    {
+                        "name": "amount",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    },
+                    {
+                        "name": "rewardeeDataHash",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    }
+                ]
+            },
+            {
+                "name": "proof",
+                "type": "bytes32[]",
+                "internalType": "bytes32[]"
+            },
+            {
+                "name": "merkleRoot",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "claimRewards",
+        "inputs": [
+            {
+                "name": "recipient",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "data",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "claimed",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "rewardee",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "rewardeeType",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "depositCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "distributeCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "cumulativeDistribution",
+                "type": "tuple",
+                "internalType": "struct ICumulativeMerkleRewards.CumulativeDistribution",
+                "components": [
+                    {
+                        "name": "timestamp",
+                        "type": "uint48",
+                        "internalType": "uint48"
+                    },
+                    {
+                        "name": "merkleRoot",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    }
+                ]
+            },
+            {
+                "name": "totalAmounts",
+                "type": "tuple[]",
+                "internalType": "struct ICumulativeMerkleRewards.TokenAmount[]",
+                "components": [
+                    {
+                        "name": "chainId",
+                        "type": "uint64",
+                        "internalType": "uint64"
+                    },
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "amount",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    }
+                ]
+            },
+            {
+                "name": "protocolSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "rewarderSignature",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "isCumulativeDistributionRoot",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "root",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "lastCumulativeDistribution",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "tuple",
+                "internalType": "struct ICumulativeMerkleRewards.CumulativeDistribution",
+                "components": [
+                    {
+                        "name": "timestamp",
+                        "type": "uint48",
+                        "internalType": "uint48"
+                    },
+                    {
+                        "name": "merkleRoot",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    }
+                ]
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "lastTotalAmount",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "protocol",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "rewarder",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "setProtocol",
+        "inputs": [
+            {
+                "name": "protocol",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setRewarder",
+        "inputs": [
+            {
+                "name": "rewarder",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "withdrawCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "recipient",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "event",
+        "name": "ClaimCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "rewardee",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "leaf",
+                "type": "tuple",
+                "indexed": false,
+                "internalType": "struct ICumulativeMerkleRewards.CumulativeDistributionLeaf",
+                "components": [
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "rewardeeType",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    },
+                    {
+                        "name": "amount",
+                        "type": "uint256",
+                        "internalType": "uint256"
+                    },
+                    {
+                        "name": "rewardeeDataHash",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    }
+                ]
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "DepositCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "DistributeCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "cumulativeDistribution",
+                "type": "tuple",
+                "indexed": false,
+                "internalType": "struct ICumulativeMerkleRewards.CumulativeDistribution",
+                "components": [
+                    {
+                        "name": "timestamp",
+                        "type": "uint48",
+                        "internalType": "uint48"
+                    },
+                    {
+                        "name": "merkleRoot",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    }
+                ]
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetProtocol",
+        "inputs": [
+            {
+                "name": "protocol",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetRewarder",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "rewarder",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "WithdrawCumulativeMerkleRewards",
+        "inputs": [
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "token",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "InsufficientDeposit",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidMerkleProof",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidMerkleRoot",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidSignature",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidTimestamp",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidToken",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NoCumulativeRewardsToClaim",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotRewarder",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "RootAlreadySet",
+        "inputs": []
+    }
+]

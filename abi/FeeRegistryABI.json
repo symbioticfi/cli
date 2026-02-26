@@ -1,0 +1,663 @@
+[
+    {
+        "type": "function",
+        "name": "CURATOR_REGISTRY",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "MAX_FEE",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "MAX_PARTICIPANT_FEE",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCuratorDefaultFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCuratorDefaultFeeAt",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "timestamp",
+                "type": "uint48",
+                "internalType": "uint48"
+            },
+            {
+                "name": "hint",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCuratorFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCuratorFeeAt",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "timestamp",
+                "type": "uint48",
+                "internalType": "uint48"
+            },
+            {
+                "name": "hints",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCuratorNetworkFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "isEnabled",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCuratorNetworkFeeAt",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "timestamp",
+                "type": "uint48",
+                "internalType": "uint48"
+            },
+            {
+                "name": "hint",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "isEnabled",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getOperatorsDefaultFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getOperatorsDefaultFeeAt",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "timestamp",
+                "type": "uint48",
+                "internalType": "uint48"
+            },
+            {
+                "name": "hint",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getOperatorsFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getOperatorsFeeAt",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "timestamp",
+                "type": "uint48",
+                "internalType": "uint48"
+            },
+            {
+                "name": "hints",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getOperatorsNetworkFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "isEnabled",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getOperatorsNetworkFeeAt",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "timestamp",
+                "type": "uint48",
+                "internalType": "uint48"
+            },
+            {
+                "name": "hint",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "isEnabled",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getProtocolFee",
+        "inputs": [
+            {
+                "name": "id",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "isEnabled",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "setCuratorFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setCuratorNetworkFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "enable",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setOperatorsFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setOperatorsNetworkFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "enable",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setProtocolFee",
+        "inputs": [
+            {
+                "name": "id",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "enable",
+                "type": "bool",
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "event",
+        "name": "SetCuratorFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetCuratorNetworkFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "enable",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetOperatorsFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetOperatorsNetworkFee",
+        "inputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "network",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "enable",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetProtocolFee",
+        "inputs": [
+            {
+                "name": "id",
+                "type": "bytes32",
+                "indexed": true,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "enable",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "FeeTooHigh",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotCurator",
+        "inputs": []
+    }
+]

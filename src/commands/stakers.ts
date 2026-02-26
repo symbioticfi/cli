@@ -48,7 +48,7 @@ export function registerStakerReadCommands(program: Command, getCtx: () => Promi
         if (ctx.json)
           return printJson({
             vault,
-            epoch: ep.toString(),
+            epoch: ep,
             account,
             withdrawalsWei,
             withdrawals: formatTokenAmount(withdrawalsWei, meta),
@@ -75,9 +75,8 @@ export function registerStakerReadCommands(program: Command, getCtx: () => Promi
         const account = parseAddress(address)
 
         const claimed = await ctx.symb.getWithdrawalsClaimed(vault, ep, account)
-        if (ctx.json) return printJson({ vault, epoch: ep.toString(), account, claimed })
+        if (ctx.json) return printJson({ vault, epoch: ep, account, claimed })
         printLine(String(claimed))
       }),
     )
 }
-

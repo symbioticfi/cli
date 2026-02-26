@@ -6,17 +6,19 @@ import { registerNetworkReadCommands } from './commands/nets'
 import { registerOperatorReadCommands } from './commands/operators'
 import { registerStakerReadCommands } from './commands/stakers'
 import { registerVaultReadCommands } from './commands/vaults'
+import { registerRewardsReadCommands } from './commands/rewards'
 import { registerNetworkWriteCommands } from './commands/writesNetwork'
 import { registerOperatorWriteCommands } from './commands/writesOperator'
 import { registerCuratorWriteCommands } from './commands/writesCurator'
 import { registerStakerWriteCommands } from './commands/writesStaker'
+import { registerRewardsWriteCommands } from './commands/writesRewards'
 
 const program = new Command()
 
 program.name('symb').description('Symbiotic CLI (TypeScript + viem)').version('0.0.0')
 
 program
-  .option('--chain <chain>', 'Chain key or chainId (mainnet, holesky, sepolia, hoodi)', 'mainnet')
+  .option('--chain <chain>', 'Chain key or chainId (mainnet, sepolia, hoodi)', 'mainnet')
   .option('--rpc <url>', 'Ethereum RPC URL override')
   .option('--provider <url>', 'Alias for --rpc (backwards compatible)')
   .option('--addresses-file <path>', 'JSON file overriding deployed addresses')
@@ -36,10 +38,12 @@ registerOperatorReadCommands(program, getCtx)
 registerVaultReadCommands(program, getCtx)
 registerStakerReadCommands(program, getCtx)
 registerLimitReadCommands(program, getCtx)
+registerRewardsReadCommands(program, getCtx)
 registerNetworkWriteCommands(program, getCtx)
 registerOperatorWriteCommands(program, getCtx)
 registerCuratorWriteCommands(program, getCtx)
 registerStakerWriteCommands(program, getCtx)
+registerRewardsWriteCommands(program, getCtx)
 
 // `tsx` may forward `--` into argv. Commander treats args after `--` as operands,
 // which breaks `pnpm dev -- --help`.

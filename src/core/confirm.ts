@@ -17,8 +17,9 @@ export async function confirmOrExit(args: { message: string; yes?: boolean }) {
 
   const ok = Boolean(res.ok)
   if (!ok) {
+    // Caller may return early, but keep a non-zero exit code to signal cancellation.
+    process.exitCode = 1
     process.stdout.write('Cancel\n')
   }
   return ok
 }
-

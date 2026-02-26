@@ -48,6 +48,7 @@ export function createContextGetter(program: Command) {
 
       const symb = new SymbioticClient({
         chainKey: resolved.chainKey,
+        chainId: resolved.chainId,
         addresses: resolved.addresses,
         publicClient,
         multicallBatchSize: opts.batchSize,

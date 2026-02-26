@@ -9,6 +9,11 @@ import OperatorNetworkSpecificDelegatorJson from '../../abi/OperatorNetworkSpeci
 import OperatorRegistryJson from '../../abi/OperatorRegistryABI.json'
 import OperatorSpecificDelegatorJson from '../../abi/OperatorSpecificDelegatorABI.json'
 import OperatorVaultOptInServiceJson from '../../abi/OperatorVaultOptInServiceABI.json'
+import CuratorRegistryJson from '../../abi/CuratorRegistryABI.json'
+import FeeRegistryJson from '../../abi/FeeRegistryABI.json'
+import ProtocolFeesJson from '../../abi/ProtocolFeesABI.json'
+import VaultSnapshotRewardsJson from '../../abi/VaultSnapshotRewardsABI.json'
+import CumulativeMerkleRewardsJson from '../../abi/CumulativeMerkleRewardsABI.json'
 import VaultFactoryJson from '../../abi/VaultFactoryABI.json'
 import VaultJson from '../../abi/VaultABI.json'
 import VaultTokenizedJson from '../../abi/VaultTokenizedABI.json'
@@ -31,19 +36,9 @@ export const OperatorNetworkSpecificDelegatorAbi = OperatorNetworkSpecificDelega
 
 export const VetoSlasherAbi = VetoSlasherJson as unknown as Abi
 
-export const AllKnownAbis = [
-  OperatorRegistryAbi,
-  NetworkRegistryAbi,
-  OperatorVaultOptInServiceAbi,
-  OperatorNetworkOptInServiceAbi,
-  NetworkMiddlewareServiceAbi,
-  VaultFactoryAbi,
-  VaultAbi,
-  VaultTokenizedAbi,
-  NetworkRestakeDelegatorAbi,
-  FullRestakeDelegatorAbi,
-  OperatorSpecificDelegatorAbi,
-  OperatorNetworkSpecificDelegatorAbi,
-  VetoSlasherAbi,
-] as const
-
+// RewardsV2
+export const CuratorRegistryAbi = CuratorRegistryJson as unknown as Abi
+export const FeeRegistryAbi = FeeRegistryJson as unknown as Abi
+export const ProtocolFeesAbi = ProtocolFeesJson as unknown as Abi
+export const VaultSnapshotRewardsAbi = VaultSnapshotRewardsJson as unknown as Abi
+export const CumulativeMerkleRewardsAbi = CumulativeMerkleRewardsJson as unknown as Abi

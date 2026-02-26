@@ -2,6 +2,9 @@ import type { Abi, Chain, ContractFunctionParameters, PublicClient, Transport } 
 
 type MulticallContract = ContractFunctionParameters<Abi, 'view' | 'pure'>
 
+// 2^14 - 1 bytes: conservative calldata chunk cap that tends to work across public RPCs.
+const DEFAULT_MULTICALL_CALLDATA_BATCH_SIZE_BYTES = 16_383
+
 export type MulticallChunkedOptions = {
   allowFailure?: boolean
   batchSize?: number
@@ -42,17 +45,25 @@ export async function multicallChunked(
 
   if (contracts.length === 0) return []
 
-  const chunks: MulticallContract[][] = []
-  for (let i = 0; i < contracts.length; i += batchSize) {
-    chunks.push(contracts.slice(i, i + batchSize))
-  }
+  const out: any[] = new Array(contracts.length)
+  const chunkCount = Math.ceil(contracts.length / batchSize)
+  const chunkIndexes = Array.from({ length: chunkCount }, (_, i) => i)
 
-  const chunkResults = await mapWithConcurrency(chunks, concurrency, async (chunk) => {
-    return client.multicall({
+  await mapWithConcurrency(chunkIndexes, concurrency, async (chunkIndex) => {
+    const start = chunkIndex * batchSize
+    const end = Math.min(start + batchSize, contracts.length)
+    const chunk = contracts.slice(start, end)
+
+    const results = await client.multicall({
       contracts: chunk,
       allowFailure,
+      batchSize: DEFAULT_MULTICALL_CALLDATA_BATCH_SIZE_BYTES,
     })
+
+    for (let i = 0; i < results.length; i++) {
+      out[start + i] = results[i]
+    }
   })
 
-  return chunkResults.flat() as any[]
+  return out
 }

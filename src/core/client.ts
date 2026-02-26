@@ -3,21 +3,32 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import {
   createPublicClient,
+  fallback,
   getAddress,
   http,
+  type Address,
   type Chain,
   type PublicClient,
   type Transport,
 } from 'viem'
 
 import { readEnv } from '../config/env'
-import { CHAIN_CONFIGS, resolveChainKey, type ChainAddresses, type ChainKey } from '../config/chains'
+import {
+  ALL_ADDRESS_KEYS,
+  CHAIN_CONFIGS,
+  CORE_ADDRESS_KEYS,
+  resolveChainKey,
+  type ChainAddresses,
+  type ChainAddressKey,
+  type ChainKey,
+} from '../config/chains'
 
 export type ResolvedClientConfig = {
   chainKey: ChainKey
   chainId: number
   viemChain: Chain
   rpcUrl: string
+  rpcUrls: readonly string[]
   addresses: ChainAddresses
   timeoutMs: number
   retries: number
@@ -32,30 +43,33 @@ export type ResolveClientConfigArgs = {
   retries?: number
 }
 
-const addressesSchema = z
-  .object({
-    op_registry: z.string(),
-    net_registry: z.string(),
-    op_vault_opt_in: z.string(),
-    op_net_opt_in: z.string(),
-    middleware_service: z.string(),
-    vault_factory: z.string(),
-  })
-  .partial()
+type AddressesOverride = Partial<Record<ChainAddressKey, string>>
+
+const addressesSchema: z.ZodType<AddressesOverride> = z.object(
+  Object.fromEntries(ALL_ADDRESS_KEYS.map((k) => [k, z.string().optional()])) as z.ZodRawShape,
+)
 
 function normalizeAddresses(
   defaults: ChainAddresses,
   override: z.infer<typeof addressesSchema> | undefined,
 ): ChainAddresses {
-  const merged = { ...defaults, ...(override ?? {}) }
-  return {
-    op_registry: getAddress(merged.op_registry),
-    net_registry: getAddress(merged.net_registry),
-    op_vault_opt_in: getAddress(merged.op_vault_opt_in),
-    op_net_opt_in: getAddress(merged.op_net_opt_in),
-    middleware_service: getAddress(merged.middleware_service),
-    vault_factory: getAddress(merged.vault_factory),
+  const merged = { ...defaults, ...(override ?? {}) } as Partial<Record<ChainAddressKey, string | Address>>
+
+  const out: Partial<Record<ChainAddressKey, Address>> = {}
+  for (const key of ALL_ADDRESS_KEYS) {
+    const v = merged[key]
+    if (v === undefined) continue
+    out[key] = getAddress(v)
   }
+
+  // Ensure required (core) addresses always exist.
+  for (const key of CORE_ADDRESS_KEYS) {
+    if (!out[key]) {
+      throw new Error(`Missing required address: ${key}`)
+    }
+  }
+
+  return out as ChainAddresses
 }
 
 async function readAddressesOverrideFromFile(filePath: string) {
@@ -76,11 +90,8 @@ export async function resolveClientConfig(args: ResolveClientConfigArgs): Promis
   const timeoutMs = args.timeoutMs ?? 60_000
   const retries = args.retries ?? 3
 
-  const rpcUrl =
-    args.rpc ??
-    args.provider ??
-    env.SYMB_RPC_URL ??
-    base.defaultRpcUrl
+  const rpcUrl = args.rpc ?? args.provider ?? env.SYMB_RPC_URL
+  const rpcUrls = rpcUrl ? [rpcUrl] : base.defaultRpcUrls
 
   const override =
     args.addressesFile
@@ -95,7 +106,8 @@ export async function resolveClientConfig(args: ResolveClientConfigArgs): Promis
     chainKey,
     chainId: base.chainId,
     viemChain: base.viemChain,
-    rpcUrl,
+    rpcUrl: rpcUrls[0]!,
+    rpcUrls,
     addresses,
     timeoutMs,
     retries,
@@ -105,11 +117,32 @@ export async function resolveClientConfig(args: ResolveClientConfigArgs): Promis
 export function createSymbioticPublicClient(config: ResolvedClientConfig): PublicClient<Transport, Chain> {
   return createPublicClient({
     chain: config.viemChain,
-    transport: http(config.rpcUrl, {
+    transport: createViemTransport(config),
+  })
+}
+
+export function createViemTransport(config: ResolvedClientConfig): Transport {
+  const urls = [...config.rpcUrls]
+  if (urls.length === 1) {
+    return http(urls[0]!, {
       timeout: config.timeoutMs,
       retryCount: config.retries,
-    }),
-  })
+    })
+  }
+
+  return fallback(
+    urls.map((url, i) =>
+      http(url, {
+        // Inner HTTP transport retries are disabled by `fallback` (retryCount: 0).
+        timeout: config.timeoutMs,
+        key: `http-${i}`,
+        name: `HTTP ${i}`,
+      }),
+    ),
+    {
+      retryCount: config.retries,
+    },
+  )
 }
 
 export async function assertChainId(client: PublicClient, expectedChainId: number) {
