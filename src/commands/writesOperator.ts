@@ -174,6 +174,9 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const ctx = await getCtx()
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
+        if (typeof account === 'string') {
+          throw new Error('The --from option cannot be used for signature commands.')
+        }
         const verifyingContract = ctx.resolved.addresses.op_vault_opt_in
 
         const nonce = await ctx.symb.getOperatorVaultOptInNonce(who, vault)
@@ -223,6 +226,9 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const ctx = await getCtx()
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
+        if (typeof account === 'string') {
+          throw new Error('The --from option cannot be used for signature commands.')
+        }
         const verifyingContract = ctx.resolved.addresses.op_vault_opt_in
 
         const nonce = await ctx.symb.getOperatorVaultOptInNonce(who, vault)
@@ -272,6 +278,9 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const ctx = await getCtx()
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
+        if (typeof account === 'string') {
+          throw new Error('The --from option cannot be used for signature commands.')
+        }
         const verifyingContract = ctx.resolved.addresses.op_net_opt_in
 
         const nonce = await ctx.symb.getOperatorNetworkOptInNonce(who, net)
@@ -321,6 +330,9 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       const ctx = await getCtx()
 
       await withSigningAccount(opts, async ({ account, address: who }) => {
+        if (typeof account === 'string') {
+          throw new Error('The --from option cannot be used for signature commands.')
+        }
         const verifyingContract = ctx.resolved.addresses.op_net_opt_in
 
         const nonce = await ctx.symb.getOperatorNetworkOptInNonce(who, net)

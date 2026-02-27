@@ -7,6 +7,10 @@ export type WriteOptions = WriteFlags
 
 export function withSigningOptions(cmd: Command) {
   return cmd
+    .option(
+      '--from <address>',
+      'Use an unlocked RPC account as sender (mainly for fork/local simulations)',
+    )
     .option('--private-key <hex>', 'Private key to sign with (discouraged; use SYMB_PRIVATE_KEY)')
     .option('--ledger', 'Use a Ledger device for signing instead of a private key', false)
     .option('--ledger-path <path>', 'BIP32 derivation path for Ledger account', DEFAULT_LEDGER_PATH)

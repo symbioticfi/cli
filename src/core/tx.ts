@@ -10,8 +10,14 @@ import { canUseSpinner } from './spinner'
 
 export function createWalletClientForAccount(
   resolved: ResolvedClientConfig,
-  account: Account,
+  account: Account | Address,
 ): WalletClient<Transport, Chain, Account> {
+  if (typeof account === 'string') {
+    throw new Error(
+      'Sending transactions with --from is not supported. Use --dry-run, or sign via --private-key/--ledger.',
+    )
+  }
+
   return createWalletClient({
     chain: resolved.viemChain,
     transport: createViemTransport(resolved),
@@ -21,7 +27,7 @@ export function createWalletClientForAccount(
 
 export type SimulateWriteArgs = {
   publicClient: PublicClient<Transport, Chain>
-  account: Account
+  account: Account | Address
   abi: Abi
   address: Address
   functionName: string
@@ -50,7 +56,7 @@ export async function runWriteTx(args: {
   mode: OutputMode
   resolved: ResolvedClientConfig
   publicClient: PublicClient<Transport, Chain>
-  account: Account
+  account: Account | Address
   abi: Abi
   address: Address
   functionName: string
@@ -80,7 +86,6 @@ export async function runWriteTx(args: {
     return `Send transaction on chainId=${args.resolved.chainId}: ${call} -> ${args.address}?`
   }
 
-  const walletClient = createWalletClientForAccount(args.resolved, args.account)
   const simulateLabel = canSpin ? ora('Simulating...').start() : undefined
   let request: any
   try {
@@ -101,6 +106,8 @@ export async function runWriteTx(args: {
     else printLine('Simulated successfully.')
     return undefined
   }
+
+  const walletClient = createWalletClientForAccount(args.resolved, args.account)
 
   if (!args.yes) {
     // Avoid breaking machine-readable output with interactive prompts.
