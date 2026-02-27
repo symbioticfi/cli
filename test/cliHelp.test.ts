@@ -50,6 +50,8 @@ describe('cli help', () => {
 
     const rewardsHelp = rewards!.helpInformation()
     expect(rewardsHelp).toMatch(/\n\s+protocol-fee\b/)
+    expect(rewardsHelp).toMatch(/\n\s+vault-snapshot-rewards\b/)
+    expect(rewardsHelp).toMatch(/\n\s+operator-fees\b/)
     expect(rewardsHelp).not.toMatch(/\n\s+rewards-protocol-fee\b/)
   })
 })

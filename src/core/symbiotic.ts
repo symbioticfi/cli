@@ -17,7 +17,9 @@ import {
   NetworkRegistryAbi,
   NetworkRestakeDelegatorAbi,
   OperatorNetworkOptInServiceAbi,
+  OperatorNetworkSpecificDelegatorAbi,
   OperatorRegistryAbi,
+  OperatorSpecificDelegatorAbi,
   OperatorVaultOptInServiceAbi,
   ProtocolFeesAbi,
   VaultAbi,
@@ -31,6 +33,15 @@ import { multicallChunked } from './multicall'
 import { encodeSubnetwork } from './subnetwork'
 import type { NetInfo, StakeBySubnetwork, TokenMeta, VaultInfo } from './types'
 import { tokenMetaFallback } from './units'
+
+type RewardDistribution = {
+  subnetworkId: bigint
+  delegator: Address
+  delegatorType: bigint
+  timestamp: bigint
+  amount: bigint
+  operatorsFees: bigint
+}
 
 export type SymbioticClientOptions = {
   chainKey: ChainKey
@@ -1068,11 +1079,12 @@ export class SymbioticClient {
   }
 
   async getVaultEpochDuration(vault: Address): Promise<bigint> {
-    return this.read<bigint>({
+    const v = await this.read<number | bigint>({
       abi: VaultAbi,
       address: vault,
       functionName: 'epochDuration',
     })
+    return typeof v === 'bigint' ? v : BigInt(v)
   }
 
   async getVaultCurrentEpoch(vault: Address): Promise<bigint> {
@@ -1084,11 +1096,12 @@ export class SymbioticClient {
   }
 
   async getVaultCurrentEpochStart(vault: Address): Promise<bigint> {
-    return this.read<bigint>({
+    const v = await this.read<number | bigint>({
       abi: VaultAbi,
       address: vault,
       functionName: 'currentEpochStart',
     })
+    return typeof v === 'bigint' ? v : BigInt(v)
   }
 
   async getMaxNetworkLimit(delegator: Address, subnetwork: Hex): Promise<bigint> {
@@ -1291,6 +1304,299 @@ export class SymbioticClient {
       functionName: 'lastUnclaimedOperatorReward',
       args: [account, vault, network, token],
     })
+  }
+
+  async previewVaultSnapshotRewards(args: {
+    staker: Address
+    vault: Address
+    network: Address
+    token: Address
+    firstRewardToClaim?: bigint
+    maxRewards?: bigint
+    lastUnclaimedOverride?: bigint
+  }): Promise<{
+    staker: Address
+    vault: Address
+    network: Address
+    token: Address
+    amount: bigint
+    lastUnclaimedRewards: bigint
+    firstClaimedReward: bigint
+    rewardsClaimed: bigint
+    rewardsLength: bigint
+  }> {
+    const staker = getAddress(args.staker)
+    const vault = getAddress(args.vault)
+    const network = getAddress(args.network)
+    const token = getAddress(args.token)
+
+    const rewards = this.requireAddress('rewards')
+    const rewardsLength = await this.read<bigint>({
+      abi: VaultSnapshotRewardsAbi,
+      address: rewards,
+      functionName: 'rewardsLength',
+      args: [vault, network, token],
+    })
+
+    const lastUnclaimedRewards =
+      args.lastUnclaimedOverride ??
+      (await this.lastUnclaimedReward(staker, vault, network, token))
+
+    const firstArg = args.firstRewardToClaim ?? 0n
+    const firstClaimedReward = firstArg > lastUnclaimedRewards ? firstArg : lastUnclaimedRewards
+
+    const available = rewardsLength > firstClaimedReward ? rewardsLength - firstClaimedReward : 0n
+    const maxRewards = args.maxRewards ?? 1_000_000n
+    const rewardsClaimed = maxRewards < available ? maxRewards : available
+
+    if (rewardsClaimed === 0n) {
+      return {
+        staker,
+        vault,
+        network,
+        token,
+        amount: 0n,
+        lastUnclaimedRewards,
+        firstClaimedReward,
+        rewardsClaimed,
+        rewardsLength,
+      }
+    }
+
+    const count = Number(rewardsClaimed)
+    const rewardCalls: any[] = []
+    for (let i = 0; i < count; i++) {
+      rewardCalls.push({
+        address: rewards,
+        abi: VaultSnapshotRewardsAbi,
+        functionName: 'rewards',
+        args: [vault, network, token, firstClaimedReward + BigInt(i)],
+      })
+    }
+
+    const distributions = (await this.mc(rewardCalls)) as RewardDistribution[]
+
+    const timestamps: bigint[] = []
+    const timestampIndex = new Map<bigint, number>()
+    for (const r of distributions) {
+      const ts = r.timestamp
+      if (!timestampIndex.has(ts)) {
+        timestampIndex.set(ts, timestamps.length)
+        timestamps.push(ts)
+      }
+    }
+
+    const totalSharesCalls = timestamps.map((timestamp) => ({
+      address: vault,
+      abi: VaultAbi,
+      functionName: 'activeSharesAt',
+      args: [timestamp, '0x'],
+    }))
+    const sharesOfCalls = timestamps.map((timestamp) => ({
+      address: vault,
+      abi: VaultAbi,
+      functionName: 'activeSharesOfAt',
+      args: [staker, timestamp, '0x'],
+    }))
+
+    const [totalSharesAt, sharesOfAt] = await Promise.all([
+      this.mc(totalSharesCalls),
+      this.mc(sharesOfCalls),
+    ])
+
+    let amount = 0n
+    for (const r of distributions) {
+      const idx = timestampIndex.get(r.timestamp)!
+      const total = totalSharesAt[idx] as bigint
+      if (total === 0n) {
+        throw new Error(`Invalid reward timestamp (activeSharesAt=0): ${r.timestamp}`)
+      }
+      const shares = sharesOfAt[idx] as bigint
+      amount += (shares * r.amount) / total
+    }
+
+    return {
+      staker,
+      vault,
+      network,
+      token,
+      amount,
+      lastUnclaimedRewards,
+      firstClaimedReward,
+      rewardsClaimed,
+      rewardsLength,
+    }
+  }
+
+  async previewOperatorFees(args: {
+    operator: Address
+    vault: Address
+    network: Address
+    token: Address
+    firstRewardToClaim?: bigint
+    maxRewards?: bigint
+    lastUnclaimedOverride?: bigint
+  }): Promise<{
+    operator: Address
+    vault: Address
+    network: Address
+    token: Address
+    amount: bigint
+    lastUnclaimedRewards: bigint
+    firstClaimedReward: bigint
+    rewardsClaimed: bigint
+    rewardsLength: bigint
+  }> {
+    const operator = getAddress(args.operator)
+    const vault = getAddress(args.vault)
+    const network = getAddress(args.network)
+    const token = getAddress(args.token)
+
+    const rewards = this.requireAddress('rewards')
+    const rewardsLength = await this.read<bigint>({
+      abi: VaultSnapshotRewardsAbi,
+      address: rewards,
+      functionName: 'rewardsLength',
+      args: [vault, network, token],
+    })
+
+    const lastUnclaimedRewards =
+      args.lastUnclaimedOverride ??
+      (await this.lastUnclaimedOperatorReward(operator, vault, network, token))
+
+    const firstArg = args.firstRewardToClaim ?? 0n
+    const firstClaimedReward = firstArg > lastUnclaimedRewards ? firstArg : lastUnclaimedRewards
+
+    const available = rewardsLength > firstClaimedReward ? rewardsLength - firstClaimedReward : 0n
+    const maxRewards = args.maxRewards ?? 1_000_000n
+    const rewardsClaimed = maxRewards < available ? maxRewards : available
+
+    if (rewardsClaimed === 0n) {
+      return {
+        operator,
+        vault,
+        network,
+        token,
+        amount: 0n,
+        lastUnclaimedRewards,
+        firstClaimedReward,
+        rewardsClaimed,
+        rewardsLength,
+      }
+    }
+
+    const count = Number(rewardsClaimed)
+    const rewardCalls: any[] = []
+    for (let i = 0; i < count; i++) {
+      rewardCalls.push({
+        address: rewards,
+        abi: VaultSnapshotRewardsAbi,
+        functionName: 'rewards',
+        args: [vault, network, token, firstClaimedReward + BigInt(i)],
+      })
+    }
+
+    const distributions = (await this.mc(rewardCalls)) as RewardDistribution[]
+
+    const delegatorOperatorCalls: any[] = []
+    const delegatorOperatorAddrByKey = new Map<string, Address>()
+    const restakeCalls: any[] = []
+    const restakeParts: Array<{ operatorsFees: bigint; idx: number }> = []
+
+    for (let i = 0; i < distributions.length; i++) {
+      const r = distributions[i]!
+      if (r.delegatorType === 1n) {
+        throw new Error(
+          `Invalid delegator type for operator fees (FullRestake) at reward index ${firstClaimedReward + BigInt(i)}`,
+        )
+      }
+
+      if (r.delegatorType === 0n) {
+        const subnetwork = encodeSubnetwork({ net: network, subnetId: r.subnetworkId })
+        restakeCalls.push({
+          address: r.delegator,
+          abi: NetworkRestakeDelegatorAbi,
+          functionName: 'operatorNetworkSharesAt',
+          args: [subnetwork, operator, r.timestamp, '0x'],
+        })
+        restakeCalls.push({
+          address: r.delegator,
+          abi: NetworkRestakeDelegatorAbi,
+          functionName: 'totalOperatorNetworkSharesAt',
+          args: [subnetwork, r.timestamp, '0x'],
+        })
+        restakeParts.push({ operatorsFees: r.operatorsFees, idx: i })
+      } else if (r.delegatorType === 2n || r.delegatorType === 3n) {
+        const key = getAddress(r.delegator).toLowerCase()
+        if (!delegatorOperatorAddrByKey.has(key)) {
+          const abi = r.delegatorType === 2n ? OperatorSpecificDelegatorAbi : OperatorNetworkSpecificDelegatorAbi
+          delegatorOperatorAddrByKey.set(key, getAddress(r.delegator))
+          delegatorOperatorCalls.push({
+            address: r.delegator,
+            abi,
+            functionName: 'operator',
+          })
+        }
+      }
+    }
+
+    const [restakeResults, delegatorOperators] = await Promise.all([
+      restakeCalls.length ? this.mc(restakeCalls) : Promise.resolve([]),
+      delegatorOperatorCalls.length ? this.mc(delegatorOperatorCalls) : Promise.resolve([]),
+    ])
+
+    const operatorByDelegator = new Map<string, Address>()
+    for (let i = 0; i < delegatorOperatorCalls.length; i++) {
+      const call = delegatorOperatorCalls[i]!
+      const delegator = getAddress(call.address as Address).toLowerCase()
+      operatorByDelegator.set(delegator, getAddress(delegatorOperators[i] as Address))
+    }
+
+    let amount = 0n
+
+    // NETWORK_RESTAKE: results are paired (shares, totalShares).
+    for (let i = 0; i < restakeParts.length; i++) {
+      const shares = restakeResults[i * 2] as bigint
+      const totalShares = restakeResults[i * 2 + 1] as bigint
+      if (totalShares === 0n) {
+        throw new Error(
+          `Invalid reward timestamp (totalOperatorNetworkSharesAt=0) at reward index ${firstClaimedReward + BigInt(restakeParts[i]!.idx)}`,
+        )
+      }
+      const fee = restakeParts[i]!.operatorsFees
+      amount += (shares * fee) / totalShares
+    }
+
+    // OPERATOR_SPECIFIC / OPERATOR_NETWORK_SPECIFIC: operatorsFees is fully claimable by the pinned operator.
+    for (let i = 0; i < distributions.length; i++) {
+      const r = distributions[i]!
+      if (r.delegatorType !== 2n && r.delegatorType !== 3n) continue
+      if (r.operatorsFees === 0n) continue
+
+      const delegator = getAddress(r.delegator).toLowerCase()
+      const pinned = operatorByDelegator.get(delegator)
+      if (!pinned) {
+        throw new Error(`Failed to resolve operator for delegator: ${r.delegator}`)
+      }
+      if (pinned !== operator) {
+        throw new Error(
+          `Not operator for delegator ${r.delegator} at reward index ${firstClaimedReward + BigInt(i)}`,
+        )
+      }
+      amount += r.operatorsFees
+    }
+
+    return {
+      operator,
+      vault,
+      network,
+      token,
+      amount,
+      lastUnclaimedRewards,
+      firstClaimedReward,
+      rewardsClaimed,
+      rewardsLength,
+    }
   }
 
   delegatorTypeName(type: bigint) {

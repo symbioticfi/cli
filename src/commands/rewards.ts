@@ -2,9 +2,11 @@ import type { Command } from 'commander'
 import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddressArg } from '../cli/argParsers'
+import { parseAddressArg, parseUint256Arg } from '../cli/argParsers'
+import { parseUint256 } from '../cli/parse'
 import { runCliAction } from '../cli/run'
 import { printJson, printLine } from '../core/output'
+import { startSpinner } from '../core/spinner'
 
 function feeToPercentString(feePpm: bigint) {
   // 1_000_000 = 100.00%
@@ -92,5 +94,119 @@ export function registerRewardsReadCommands(program: Command, getCtx: () => Prom
         if (ctx.json) return printJson({ vault: vaultAddress, token: tokenAddress, fees })
         printLine(fees.toString())
       }),
+    )
+
+  program
+    .command('vault-snapshot-rewards')
+    .description('Get claimable vault snapshot rewards (amount) for a staker.')
+    .argument('<staker_address>', 'staker address', parseAddressArg)
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .argument('<token>', 'ERC20 token address', parseAddressArg)
+    .argument(
+      '[first_reward_to_claim]',
+      'first reward index to claim (default 0)',
+      parseUint256Arg,
+      0n,
+    )
+    .argument(
+      '[max_rewards]',
+      'max rewards to claim (default 1000000)',
+      parseUint256Arg,
+      1_000_000n,
+    )
+    .option('--last-unclaimed <n>', 'Override lastUnclaimedReward (uint256)')
+    .action(
+      (
+        staker: Address,
+        vault: Address,
+        network: Address,
+        token: Address,
+        firstRewardToClaim: bigint,
+        maxRewards: bigint,
+        cmdOpts: { lastUnclaimed?: string },
+      ) =>
+        runCliAction(async () => {
+          const ctx = await getCtx()
+          const spinner = startSpinner(ctx, 'Computing claimable vault snapshot rewards...')
+          const last =
+            cmdOpts.lastUnclaimed !== undefined ? parseUint256(cmdOpts.lastUnclaimed) : undefined
+
+          const res = await (async () => {
+            try {
+              return await ctx.symb.previewVaultSnapshotRewards({
+                staker,
+                vault,
+                network,
+                token,
+                firstRewardToClaim,
+                maxRewards,
+                lastUnclaimedOverride: last,
+              })
+            } finally {
+              spinner?.stop()
+            }
+          })()
+
+          if (ctx.json) return printJson(res)
+          printLine(res.amount.toString())
+        }),
+    )
+
+  program
+    .command('operator-fees')
+    .description('Get claimable operator fees (amount) for an operator.')
+    .argument('<operator_address>', 'operator address', parseAddressArg)
+    .argument('<vault_address>', 'vault address', parseAddressArg)
+    .argument('<network_address>', 'network address', parseAddressArg)
+    .argument('<token>', 'ERC20 token address', parseAddressArg)
+    .argument(
+      '[first_reward_to_claim]',
+      'first reward index to claim (default 0)',
+      parseUint256Arg,
+      0n,
+    )
+    .argument(
+      '[max_rewards]',
+      'max rewards to claim (default 1000000)',
+      parseUint256Arg,
+      1_000_000n,
+    )
+    .option('--last-unclaimed <n>', 'Override lastUnclaimedOperatorReward (uint256)')
+    .action(
+      (
+        operator: Address,
+        vault: Address,
+        network: Address,
+        token: Address,
+        firstRewardToClaim: bigint,
+        maxRewards: bigint,
+        cmdOpts: { lastUnclaimed?: string },
+      ) =>
+        runCliAction(async () => {
+          const ctx = await getCtx()
+          const spinner = startSpinner(ctx, 'Computing claimable operator fees...')
+          const last =
+            cmdOpts.lastUnclaimed !== undefined ? parseUint256(cmdOpts.lastUnclaimed) : undefined
+
+          const res = await (async () => {
+            try {
+              return await ctx.symb.previewOperatorFees({
+                operator,
+                vault,
+                network,
+                token,
+                firstRewardToClaim,
+                maxRewards,
+                lastUnclaimedOverride: last,
+              })
+            } finally {
+              spinner?.stop()
+            }
+          })()
+
+          if (ctx.json) return printJson(res)
+          printLine(res.amount.toString())
+        }),
     )
 }

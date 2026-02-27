@@ -129,6 +129,8 @@ pnpm build
 - `symb rewards curator-fee <vault_address> <network_address>` - Get effective curator fee (ppm) for a vault+network.
 - `symb rewards protocol-fee <rewards_type> <network_address>` - Get protocol fee (ppm) for a rewards type and network.
 - `symb rewards curator-fees <vault_address> <token>` - Get claimable curator fees (amount) for a vault+token.
+- `symb rewards vault-snapshot-rewards <staker_address> <vault_address> <network_address> <token> [first_reward_to_claim] [max_rewards]` - Get claimable vault snapshot rewards (amount) for a staker.
+- `symb rewards operator-fees <operator_address> <vault_address> <network_address> <token> [first_reward_to_claim] [max_rewards]` - Get claimable operator fees (amount) for an operator.
 - `symb rewards set-curator [write options] <vault_address> <curator>` - Set curator for a vault.
 - `symb rewards set-operators-fee [write options] <vault_address> <fee>` - Set default operators fee (ppm) for a vault.
 - `symb rewards set-operators-network-fee [write options] <vault_address> <network_address> <fee>` - Set network-specific operators fee (ppm) for a vault.
