@@ -1,10 +1,7 @@
-import { z } from 'zod'
 import {
   createPublicClient,
   fallback,
-  getAddress,
   http,
-  type Address,
   type Chain,
   type PublicClient,
   type Transport,
@@ -12,12 +9,9 @@ import {
 
 import { readEnv } from '../config/env'
 import {
-  ALL_ADDRESS_KEYS,
   CHAIN_CONFIGS,
-  CORE_ADDRESS_KEYS,
   resolveChainKey,
   type ChainAddresses,
-  type ChainAddressKey,
   type ChainKey,
 } from '../config/chains'
 
@@ -39,39 +33,6 @@ export type ResolveClientConfigArgs = {
   retries?: number
 }
 
-type AddressesOverride = Partial<Record<ChainAddressKey, string>>
-
-const addressesSchema: z.ZodType<AddressesOverride> = z.object(
-  Object.fromEntries(ALL_ADDRESS_KEYS.map((k) => [k, z.string().optional()])) as z.ZodRawShape,
-)
-
-function normalizeAddresses(
-  defaults: ChainAddresses,
-  override: z.infer<typeof addressesSchema> | undefined,
-): ChainAddresses {
-  const merged = { ...defaults, ...(override ?? {}) } as Partial<Record<ChainAddressKey, string | Address>>
-
-  const out: Partial<Record<ChainAddressKey, Address>> = {}
-  for (const key of ALL_ADDRESS_KEYS) {
-    const v = merged[key]
-    if (v === undefined) continue
-    out[key] = getAddress(v)
-  }
-
-  // Ensure required (core) addresses always exist.
-  for (const key of CORE_ADDRESS_KEYS) {
-    if (!out[key]) {
-      throw new Error(`Missing required address: ${key}`)
-    }
-  }
-
-  return out as ChainAddresses
-}
-
-function readAddressesOverrideFromEnv(envValue: string) {
-  return addressesSchema.parse(JSON.parse(envValue))
-}
-
 export async function resolveClientConfig(args: ResolveClientConfigArgs): Promise<ResolvedClientConfig> {
   const env = readEnv()
 
@@ -84,10 +45,7 @@ export async function resolveClientConfig(args: ResolveClientConfigArgs): Promis
   const rpcUrl = args.rpc ?? env.SYMB_RPC_URL
   const rpcUrls = rpcUrl ? [rpcUrl] : base.defaultRpcUrls
 
-  const override =
-    env.SYMB_ADDRESSES_JSON ? readAddressesOverrideFromEnv(env.SYMB_ADDRESSES_JSON) : undefined
-
-  const addresses = normalizeAddresses(base.addresses, override)
+  const addresses: ChainAddresses = base.addresses
 
   return {
     chainKey,

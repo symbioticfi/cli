@@ -87,14 +87,14 @@ export class SymbioticClient {
     return this.requireAddressValue(key, address)
   }
 
-  private requireAddressValue(name: string, address: Address | undefined): Address {
-    if (!address) {
-      throw new Error(
-        `${name} address is not configured for chain ${this.chainKey}. Provide it via SYMB_ADDRESSES_JSON.`,
-      )
-    }
-    return address
-  }
+	  private requireAddressValue(name: string, address: Address | undefined): Address {
+	    if (!address) {
+	      throw new Error(
+	        `${name} address is not configured for chain ${this.chainKey}.`,
+	      )
+	    }
+	    return address
+	  }
 
   private async read<T>(args: {
     abi: any

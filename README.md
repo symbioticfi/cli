@@ -52,7 +52,6 @@ Common env vars:
 
 - `SYMB_RPC_URL`
 - `SYMB_PRIVATE_KEY`
-- `SYMB_ADDRESSES_JSON` (JSON object with deployed addresses overrides)
 
 If `SYMB_RPC_URL`/`--rpc` is not provided, the CLI uses a built-in fallback list of public RPC endpoints for the selected chain.
 

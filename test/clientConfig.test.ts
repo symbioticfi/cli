@@ -1,10 +1,9 @@
-import { getAddress } from 'viem'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { CHAIN_CONFIGS } from '../src/config/chains'
 import { resolveClientConfig } from '../src/core/client'
 
-const ENV_KEYS = ['SYMB_RPC_URL', 'SYMB_ADDRESSES_JSON'] as const
+const ENV_KEYS = ['SYMB_RPC_URL'] as const
 
 describe('resolveClientConfig', () => {
   const oldEnv: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
@@ -42,34 +41,8 @@ describe('resolveClientConfig', () => {
     expect(b.rpcUrl).toBe('https://rpc.example')
   })
 
-  it('merges addresses override from env', async () => {
-    const override = {
-      curator_registry: '0x1111111111111111111111111111111111111111',
-      fee_registry: '0x2222222222222222222222222222222222222222',
-      rewards: '0x3333333333333333333333333333333333333333',
-    }
-    process.env.SYMB_ADDRESSES_JSON = JSON.stringify(override)
-
-    const cfg = await resolveClientConfig({ chain: 'hoodi' })
-    expect(cfg.addresses.op_registry).toBe(CHAIN_CONFIGS.hoodi.addresses.op_registry)
-    expect(cfg.addresses.curator_registry).toBe(getAddress(override.curator_registry))
-    expect(cfg.addresses.fee_registry).toBe(getAddress(override.fee_registry))
-    expect(cfg.addresses.rewards).toBe(getAddress(override.rewards))
-  })
-
-  it('allows overrides to replace existing addresses', async () => {
-    const override = {
-      op_registry: '0x4444444444444444444444444444444444444444',
-    }
-    process.env.SYMB_ADDRESSES_JSON = JSON.stringify(override)
-
+  it('uses chain default addresses', async () => {
     const cfg = await resolveClientConfig({ chain: 'mainnet' })
-    expect(cfg.addresses.op_registry).toBe(getAddress(override.op_registry))
-    expect(cfg.addresses.net_registry).toBe(CHAIN_CONFIGS.mainnet.addresses.net_registry)
-  })
-
-  it('throws on invalid address override', async () => {
-    process.env.SYMB_ADDRESSES_JSON = JSON.stringify({ op_registry: 'not-an-address' })
-    await expect(resolveClientConfig({ chain: 'mainnet' })).rejects.toThrow()
+    expect(cfg.addresses).toEqual(CHAIN_CONFIGS.mainnet.addresses)
   })
 })
