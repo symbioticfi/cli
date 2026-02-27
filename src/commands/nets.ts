@@ -250,9 +250,16 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
         const net = networkAddress
 
         const slasher = await ctx.symb.getVaultSlasher(vault)
-        const slasherType = await ctx.symb.getEntityType(slasher)
+        const slasherType = await ctx.symb.tryGetEntityType(slasher)
         if (slasherType !== 1n) {
-          if (ctx.json) return printJson({ error: 'It is not a VetoSlasher.' })
+          if (ctx.json)
+            return printJson({
+              vault,
+              network: net,
+              slasher,
+              isVetoSlasher: false,
+              error: 'It is not a VetoSlasher.',
+            })
           printLine('It is not a VetoSlasher.')
           return
         }
@@ -286,9 +293,16 @@ export function registerNetworkReadCommands(program: Command, getCtx: () => Prom
         const net = networkAddress
 
         const slasher = await ctx.symb.getVaultSlasher(vault)
-        const slasherType = await ctx.symb.getEntityType(slasher)
+        const slasherType = await ctx.symb.tryGetEntityType(slasher)
         if (slasherType !== 1n) {
-          if (ctx.json) return printJson({ error: 'It is not a VetoSlasher.' })
+          if (ctx.json)
+            return printJson({
+              vault,
+              network: net,
+              slasher,
+              isVetoSlasher: false,
+              error: 'It is not a VetoSlasher.',
+            })
           printLine('It is not a VetoSlasher.')
           return
         }

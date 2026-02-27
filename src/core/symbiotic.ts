@@ -1049,6 +1049,16 @@ export class SymbioticClient {
     })
   }
 
+  async tryGetEntityType(entity: Address): Promise<bigint | undefined> {
+    try {
+      return await this.getEntityType(entity)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.includes('The contract function "TYPE" returned no data')) return undefined
+      throw err
+    }
+  }
+
   async getResolverSetEpochDelay(slasher: Address): Promise<bigint> {
     return this.read<bigint>({
       abi: VetoSlasherAbi,
