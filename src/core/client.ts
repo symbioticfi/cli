@@ -33,7 +33,9 @@ export type ResolveClientConfigArgs = {
   retries?: number
 }
 
-export async function resolveClientConfig(args: ResolveClientConfigArgs): Promise<ResolvedClientConfig> {
+export async function resolveClientConfig(
+  args: ResolveClientConfigArgs,
+): Promise<ResolvedClientConfig> {
   const env = readEnv()
 
   const chainKey = resolveChainKey(args.chain)
@@ -59,7 +61,9 @@ export async function resolveClientConfig(args: ResolveClientConfigArgs): Promis
   }
 }
 
-export function createSymbioticPublicClient(config: ResolvedClientConfig): PublicClient<Transport, Chain> {
+export function createSymbioticPublicClient(
+  config: ResolvedClientConfig,
+): PublicClient<Transport, Chain> {
   return createPublicClient({
     chain: config.viemChain,
     transport: createViemTransport(config),
@@ -93,6 +97,8 @@ export function createViemTransport(config: ResolvedClientConfig): Transport {
 export async function assertChainId(client: PublicClient, expectedChainId: number) {
   const actual = await client.getChainId()
   if (actual !== expectedChainId) {
-    throw new Error(`Mismatch between specified chain ID (${expectedChainId}) and provider's chain ID (${actual})`)
+    throw new Error(
+      `Mismatch between specified chain ID (${expectedChainId}) and provider's chain ID (${actual})`,
+    )
   }
 }

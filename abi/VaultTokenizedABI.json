@@ -26,16 +26,12 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "target", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "target", "type": "address" }],
     "name": "AddressEmptyCode",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "AddressInsufficientBalance",
     "type": "error"
   },
@@ -64,30 +60,22 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "approver", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "approver", "type": "address" }],
     "name": "ERC20InvalidApprover",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "receiver", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "receiver", "type": "address" }],
     "name": "ERC20InvalidReceiver",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "sender", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "sender", "type": "address" }],
     "name": "ERC20InvalidSender",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "spender", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "spender", "type": "address" }],
     "name": "ERC20InvalidSpender",
     "type": "error"
   },
@@ -119,16 +107,12 @@
   { "inputs": [], "name": "NotSlasher", "type": "error" },
   { "inputs": [], "name": "NotWhitelistedDepositor", "type": "error" },
   {
-    "inputs": [
-      { "internalType": "address", "name": "owner", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
     "name": "OwnableInvalidOwner",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "OwnableUnauthorizedAccount",
     "type": "error"
   },
@@ -142,9 +126,7 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "token", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "token", "type": "address" }],
     "name": "SafeERC20FailedOperation",
     "type": "error"
   },
@@ -604,9 +586,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "activeBalanceOf",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
@@ -641,9 +621,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "activeSharesOf",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
@@ -698,9 +676,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "balanceOf",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
@@ -719,9 +695,7 @@
       { "internalType": "uint256", "name": "epoch", "type": "uint256" }
     ],
     "name": "claim",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -731,9 +705,7 @@
       { "internalType": "uint256[]", "name": "epochs", "type": "uint256[]" }
     ],
     "name": "claimBatch",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -804,9 +776,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "uint48", "name": "timestamp", "type": "uint48" }
-    ],
+    "inputs": [{ "internalType": "uint48", "name": "timestamp", "type": "uint48" }],
     "name": "epochAt",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
@@ -827,9 +797,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "role", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "role", "type": "bytes32" }],
     "name": "getRoleAdmin",
     "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
     "stateMutability": "view",
@@ -881,9 +849,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "isDepositorWhitelisted",
     "outputs": [{ "internalType": "bool", "name": "value", "type": "bool" }],
     "stateMutability": "view",
@@ -943,9 +909,7 @@
       { "internalType": "uint48", "name": "captureTimestamp", "type": "uint48" }
     ],
     "name": "onSlash",
-    "outputs": [
-      { "internalType": "uint256", "name": "slashedAmount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "slashedAmount", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -1012,18 +976,14 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "delegator_", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "delegator_", "type": "address" }],
     "name": "setDelegator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "limit", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "limit", "type": "uint256" }],
     "name": "setDepositLimit",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -1054,18 +1014,14 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "slasher_", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "slasher_", "type": "address" }],
     "name": "setSlasher",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "slashableBalanceOf",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
@@ -1089,9 +1045,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" }
-    ],
+    "inputs": [{ "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" }],
     "name": "supportsInterface",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "view",
@@ -1140,9 +1094,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "newOwner", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
     "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -1169,13 +1121,9 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "epoch", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "epoch", "type": "uint256" }],
     "name": "withdrawalShares",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -1185,20 +1133,14 @@
       { "internalType": "address", "name": "account", "type": "address" }
     ],
     "name": "withdrawalSharesOf",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "epoch", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "epoch", "type": "uint256" }],
     "name": "withdrawals",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },

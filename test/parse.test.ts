@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { getAddress } from 'viem'
 
-import { parseAddress, parseBytes32Hex, parseHex, parseUint48, parseUint96, parseUint256 } from '../src/cli/parse'
+import {
+  parseAddress,
+  parseBytes32Hex,
+  parseHex,
+  parseUint48,
+  parseUint96,
+  parseUint256,
+} from '../src/cli/parse'
 
 describe('cli/parse', () => {
   it('parseAddress normalizes to checksum', () => {
@@ -38,4 +45,3 @@ describe('cli/parse', () => {
     expect(() => parseHex('0xZZ')).toThrow()
   })
 })
-

@@ -49,9 +49,7 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
         const fullSpinner = opts.full
           ? startSpinner(ctx, 'Fetching full vault data (this can take a while)...')
           : undefined
-        let vaultDatas:
-          | Awaited<ReturnType<CliContext['symb']['getVaultsNetsOpsFull']>>
-          | undefined
+        let vaultDatas: Awaited<ReturnType<CliContext['symb']['getVaultsNetsOpsFull']>> | undefined
         try {
           vaultDatas = opts.full ? await ctx.symb.getVaultsNetsOpsFull(vaults) : undefined
         } finally {
@@ -60,7 +58,7 @@ export function registerVaultReadCommands(program: Command, getCtx: () => Promis
 
         for (let idx = 0; idx < vaults.length; idx++) {
           const v = vaults[idx]!
-          const vaultData = opts.full ? vaultDatas?.[idx] ?? [] : []
+          const vaultData = opts.full ? (vaultDatas?.[idx] ?? []) : []
           printIndented(`Vault: ${v.vault}`, 2)
 
           const collateralMeta = await ctx.symb.getTokenMeta(v.collateral)

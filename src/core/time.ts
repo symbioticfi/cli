@@ -12,4 +12,3 @@ export function formatUnixTimestampSeconds(timestamp: bigint) {
   const ss = pad(d.getSeconds())
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
 }
-

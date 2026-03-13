@@ -47,4 +47,3 @@ describe('multicallChunked', () => {
     expect(calls).toBe(Math.ceil(total / batchSize))
   })
 })
-

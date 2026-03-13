@@ -326,9 +326,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "role", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "role", "type": "bytes32" }],
     "name": "getRoleAdmin",
     "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
     "stateMutability": "view",
@@ -369,20 +367,14 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" }],
     "name": "maxNetworkLimit",
-    "outputs": [
-      { "internalType": "uint256", "name": "value", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "value", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "subnetwork", "type": "bytes32" }],
     "name": "networkLimit",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
@@ -448,9 +440,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "hook_", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "hook_", "type": "address" }],
     "name": "setHook",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -509,9 +499,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" }
-    ],
+    "inputs": [{ "internalType": "bytes4", "name": "interfaceId", "type": "bytes4" }],
     "name": "supportsInterface",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "view",

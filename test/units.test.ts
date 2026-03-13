@@ -21,4 +21,3 @@ describe('units', () => {
     expect(() => parseTokenAmount('1', meta)).toThrow()
   })
 })
-

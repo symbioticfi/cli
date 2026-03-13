@@ -22,4 +22,3 @@ export function decodeSubnetwork(subnetwork: Hex): { net: Address; subnetId: big
   const subnetId = BigInt(`0x${raw.slice(40)}`)
   return { net, subnetId }
 }
-

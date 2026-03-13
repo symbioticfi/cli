@@ -17,4 +17,3 @@ export function groupBy<T, K>(items: readonly T[], keyFn: (item: T) => K): Map<K
   }
   return out
 }
-

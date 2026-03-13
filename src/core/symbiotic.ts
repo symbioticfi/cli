@@ -87,14 +87,12 @@ export class SymbioticClient {
     return this.requireAddressValue(key, address)
   }
 
-	  private requireAddressValue(name: string, address: Address | undefined): Address {
-	    if (!address) {
-	      throw new Error(
-	        `${name} address is not configured for chain ${this.chainKey}.`,
-	      )
-	    }
-	    return address
-	  }
+  private requireAddressValue(name: string, address: Address | undefined): Address {
+    if (!address) {
+      throw new Error(`${name} address is not configured for chain ${this.chainKey}.`)
+    }
+    return address
+  }
 
   private async read<T>(args: {
     abi: any
@@ -590,8 +588,7 @@ export class SymbioticClient {
 
     // Pass 2: Stake calls only for (vault, op) pairs that are opted into the vault.
     const stakeCalls: any[] = []
-    const stakePairs: Array<{ opIdx: number; vault: VaultInfo & { limit: StakeBySubnetwork } }> =
-      []
+    const stakePairs: Array<{ opIdx: number; vault: VaultInfo & { limit: StakeBySubnetwork } }> = []
 
     for (let vaultIdx = 0; vaultIdx < vaults.length; vaultIdx++) {
       const vault = vaults[vaultIdx]!
@@ -705,7 +702,9 @@ export class SymbioticClient {
 
   async getVaultsNetsOpsFull(
     vaultInfos: readonly VaultInfo[],
-  ): Promise<Array<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>>> {
+  ): Promise<
+    Array<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>>
+  > {
     if (vaultInfos.length === 0) return []
 
     const nets = await this.getNets()
@@ -845,8 +844,9 @@ export class SymbioticClient {
 
     const stakes = (await this.mc(stakeCalls)) as bigint[]
 
-    const out: Array<Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>> =
-      new Array(vaultInfos.length)
+    const out: Array<
+      Array<{ net: Address; ops: Array<{ op: Address; stake: StakeBySubnetwork }> }>
+    > = new Array(vaultInfos.length)
 
     let stakeOffset = 0
     for (let vIdx = 0; vIdx < vaultInfos.length; vIdx++) {
@@ -937,10 +937,11 @@ export class SymbioticClient {
     for (let netIdx = 0; netIdx < nets.length; netIdx++) {
       const eligible = eligibleVaultsByNet[netIdx] ?? []
       for (const vault of eligible) {
-        const { stake: limit, hasValue, nextOffset } = this.decodeStakeBySubnetwork(
-          limitResults,
-          limitOffset,
-        )
+        const {
+          stake: limit,
+          hasValue,
+          nextOffset,
+        } = this.decodeStakeBySubnetwork(limitResults, limitOffset)
         limitOffset = nextOffset
         if (hasValue) vaultsWithLimitByNet[netIdx]!.push({ ...vault, limit })
       }
@@ -1215,10 +1216,10 @@ export class SymbioticClient {
   async getWithdrawalsClaimed(vault: Address, epoch: bigint, account: Address): Promise<boolean> {
     return Boolean(
       await this.read<boolean>({
-      abi: VaultAbi,
-      address: vault,
-      functionName: 'isWithdrawalsClaimed',
-      args: [epoch, account],
+        abi: VaultAbi,
+        address: vault,
+        functionName: 'isWithdrawalsClaimed',
+        args: [epoch, account],
       }),
     )
   }
@@ -1349,8 +1350,7 @@ export class SymbioticClient {
     })
 
     const lastUnclaimedRewards =
-      args.lastUnclaimedOverride ??
-      (await this.lastUnclaimedReward(staker, vault, network, token))
+      args.lastUnclaimedOverride ?? (await this.lastUnclaimedReward(staker, vault, network, token))
 
     const firstArg = args.firstRewardToClaim ?? 0n
     const firstClaimedReward = firstArg > lastUnclaimedRewards ? firstArg : lastUnclaimedRewards
@@ -1539,7 +1539,10 @@ export class SymbioticClient {
       } else if (r.delegatorType === 2n || r.delegatorType === 3n) {
         const key = getAddress(r.delegator).toLowerCase()
         if (!delegatorOperatorAddrByKey.has(key)) {
-          const abi = r.delegatorType === 2n ? OperatorSpecificDelegatorAbi : OperatorNetworkSpecificDelegatorAbi
+          const abi =
+            r.delegatorType === 2n
+              ? OperatorSpecificDelegatorAbi
+              : OperatorNetworkSpecificDelegatorAbi
           delegatorOperatorAddrByKey.set(key, getAddress(r.delegator))
           delegatorOperatorCalls.push({
             address: r.delegator,

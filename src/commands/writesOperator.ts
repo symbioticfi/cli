@@ -31,9 +31,7 @@ const DEFAULT_SIG_DURATION_SECONDS = 7n * 24n * 60n * 60n
 
 export function registerOperatorWriteCommands(program: Command, getCtx: () => Promise<CliContext>) {
   withWriteOptions(
-    program
-      .command('register')
-      .description('Register the signer as an operator.'),
+    program.command('register').description('Register the signer as an operator.'),
   ).action((opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()

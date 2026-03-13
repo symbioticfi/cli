@@ -20,4 +20,3 @@ describe('subnetwork', () => {
     expect(() => encodeSubnetwork({ net, subnetId: 2n ** 96n })).toThrow()
   })
 })
-

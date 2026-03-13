@@ -45,7 +45,11 @@ function unwrapModuleDefault<T>(moduleValue: unknown): T {
   const seen = new Set<unknown>()
   let current: unknown = moduleValue
 
-  while ((typeof current === 'object' || typeof current === 'function') && current !== null && !seen.has(current)) {
+  while (
+    (typeof current === 'object' || typeof current === 'function') &&
+    current !== null &&
+    !seen.has(current)
+  ) {
     if (typeof current === 'function') return current as T
     seen.add(current)
 
@@ -66,7 +70,8 @@ function unwrapModuleDefault<T>(moduleValue: unknown): T {
 
 function getTransportNodeHid(): LedgerTransportFactory {
   const transport = unwrapModuleDefault<LedgerTransportFactory>(TransportNodeHidModule)
-  if (typeof transport?.create === 'function' || typeof transport?.open === 'function') return transport
+  if (typeof transport?.create === 'function' || typeof transport?.open === 'function')
+    return transport
   throw new Error('Failed to load Ledger HID transport module')
 }
 
@@ -89,7 +94,10 @@ function signableMessageToHex(message: SignableMessage): Hex {
   return toHex(message.raw)
 }
 
-function withEip712DomainTypes(types: Record<string, readonly { name: string; type: string }[]>, domain?: TypedDataDomain) {
+function withEip712DomainTypes(
+  types: Record<string, readonly { name: string; type: string }[]>,
+  domain?: TypedDataDomain,
+) {
   return {
     EIP712Domain: getTypesForEIP712Domain({ domain }),
     ...types,
@@ -101,7 +109,10 @@ async function readAddressAtPath(eth: Eth, path: string): Promise<Address> {
   return getAddress(address)
 }
 
-async function resolveLedgerPath(eth: Eth, expectedAddress?: Address): Promise<{ path: string; address: Address }> {
+async function resolveLedgerPath(
+  eth: Eth,
+  expectedAddress?: Address,
+): Promise<{ path: string; address: Address }> {
   if (!expectedAddress) {
     return {
       path: DEFAULT_LEDGER_PATH,
@@ -168,20 +179,21 @@ export async function createLedgerAccount(config: LedgerAccountConfig): Promise<
       return signed
     },
     async signTypedData(parameters) {
-      const { domain = {}, primaryType, message, types } = parameters as TypedDataDefinition<TypedData, any>
+      const {
+        domain = {},
+        primaryType,
+        message,
+        types,
+      } = parameters as TypedDataDefinition<TypedData, any>
       const fullTypes = withEip712DomainTypes(types as any, domain)
 
       const domainHash = hashDomain({ domain, types: fullTypes })
       const messageHash =
         primaryType === 'EIP712Domain'
-          ? ('0x' + '00'.repeat(32)) as Hex
+          ? (('0x' + '00'.repeat(32)) as Hex)
           : hashStruct({ data: message as any, primaryType: primaryType as any, types: fullTypes })
 
-      const sig = await eth.signEIP712HashedMessage(
-        path,
-        domainHash.slice(2),
-        messageHash.slice(2),
-      )
+      const sig = await eth.signEIP712HashedMessage(path, domainHash.slice(2), messageHash.slice(2))
 
       return serializeSignature({
         r: `0x${sig.r}`,

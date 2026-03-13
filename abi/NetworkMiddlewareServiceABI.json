@@ -39,20 +39,14 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "network", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "network", "type": "address" }],
     "name": "middleware",
-    "outputs": [
-      { "internalType": "address", "name": "value", "type": "address" }
-    ],
+    "outputs": [{ "internalType": "address", "name": "value", "type": "address" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "middleware_", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "middleware_", "type": "address" }],
     "name": "setMiddleware",
     "outputs": [],
     "stateMutability": "nonpayable",

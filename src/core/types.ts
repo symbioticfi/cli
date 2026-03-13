@@ -17,4 +17,3 @@ export type VaultInfo = {
   delegatorOperator?: Address
   delegatorNetwork?: Address
 }
-

@@ -127,9 +127,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "where", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "where", "type": "address" }],
     "name": "increaseNonce",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -163,16 +161,12 @@
       { "internalType": "address", "name": "where", "type": "address" }
     ],
     "name": "nonces",
-    "outputs": [
-      { "internalType": "uint256", "name": "nonce", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "nonce", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "where", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "where", "type": "address" }],
     "name": "optIn",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -203,9 +197,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "where", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "where", "type": "address" }],
     "name": "optOut",
     "outputs": [],
     "stateMutability": "nonpayable",

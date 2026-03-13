@@ -101,7 +101,10 @@ describe('SymbioticClient (call building + StakeBySubnetwork decoding)', () => {
 
     const calls = publicClient.multicall.mock.calls[0]?.[0]?.contracts as any[]
     expect(calls).toHaveLength(4)
-    expect(calls.slice(0, 2).map((c) => c.functionName)).toEqual(['maxNetworkLimit', 'maxNetworkLimit'])
+    expect(calls.slice(0, 2).map((c) => c.functionName)).toEqual([
+      'maxNetworkLimit',
+      'maxNetworkLimit',
+    ])
     expect(calls.slice(2).map((c) => c.functionName)).toEqual(['networkLimit', 'networkLimit'])
 
     const decoded = calls.map((c) => decodeSubnetwork(c.args[0]))
@@ -114,8 +117,22 @@ describe('SymbioticClient (call building + StakeBySubnetwork decoding)', () => {
     const op1 = a('0x9000000000000000000000000000000000000001')
     const op2 = a('0x9000000000000000000000000000000000000002')
 
-    const vault1 = { ...makeVault({ vault: a('0x0100000000000000000000000000000000000000'), delegator: a('0x1111111111111111111111111111111111111111'), delegatorType: 0n }), limit: { 0: 1n } as StakeBySubnetwork }
-    const vault2 = { ...makeVault({ vault: a('0x0200000000000000000000000000000000000000'), delegator: a('0x2222222222222222222222222222222222222222'), delegatorType: 0n }), limit: { 1: 2n } as StakeBySubnetwork }
+    const vault1 = {
+      ...makeVault({
+        vault: a('0x0100000000000000000000000000000000000000'),
+        delegator: a('0x1111111111111111111111111111111111111111'),
+        delegatorType: 0n,
+      }),
+      limit: { 0: 1n } as StakeBySubnetwork,
+    }
+    const vault2 = {
+      ...makeVault({
+        vault: a('0x0200000000000000000000000000000000000000'),
+        delegator: a('0x2222222222222222222222222222222222222222'),
+        delegatorType: 0n,
+      }),
+      limit: { 1: 2n } as StakeBySubnetwork,
+    }
 
     const publicClient = {
       multicall: vi
@@ -214,9 +231,7 @@ describe('SymbioticClient (call building + StakeBySubnetwork decoding)', () => {
     expect(
       stakeCalls.some(
         (c) =>
-          c.address === vaultOpSpecific.delegator &&
-          Array.isArray(c.args) &&
-          c.args[1] === op2,
+          c.address === vaultOpSpecific.delegator && Array.isArray(c.args) && c.args[1] === op2,
       ),
     ).toBe(false)
   })
@@ -278,9 +293,9 @@ describe('SymbioticClient (call building + StakeBySubnetwork decoding)', () => {
     expect(limitCalls.slice(0, 4).every((c) => c.functionName === 'networkLimit')).toBe(true)
     expect(limitCalls.slice(4).every((c) => c.functionName === 'maxNetworkLimit')).toBe(true)
     // Pinned-to-netB vault should not be queried against netA.
-    expect(limitCalls.some((c) => c.address === vault2.delegator && c.functionName === 'networkLimit')).toBe(
-      false,
-    )
+    expect(
+      limitCalls.some((c) => c.address === vault2.delegator && c.functionName === 'networkLimit'),
+    ).toBe(false)
   })
 
   it('getVaultNetsOpsFull decodes stakes per net/op and filters empty', async () => {

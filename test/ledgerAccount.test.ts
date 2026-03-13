@@ -107,9 +107,9 @@ describe('createLedgerAccount', () => {
   it('fails when the expected Ledger address is not found and closes transport', async () => {
     const { createLedgerAccount } = await import('../src/core/signing/ledger')
 
-    await expect(createLedgerAccount({ expectedAddress: '0x0000000000000000000000000000000000000001' })).rejects.toThrow(
-      'was not found in Ledger Ethereum derivation paths',
-    )
+    await expect(
+      createLedgerAccount({ expectedAddress: '0x0000000000000000000000000000000000000001' }),
+    ).rejects.toThrow('was not found in Ledger Ethereum derivation paths')
 
     expect(mocks.closeTransport).toHaveBeenCalledTimes(1)
   })

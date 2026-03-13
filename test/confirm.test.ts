@@ -39,4 +39,3 @@ describe('confirmOrExit', () => {
     writeSpy.mockRestore()
   })
 })
-

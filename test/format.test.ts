@@ -24,4 +24,3 @@ describe('format', () => {
     expect(by.get('b')?.map((x) => x.v)).toEqual([3])
   })
 })
-
