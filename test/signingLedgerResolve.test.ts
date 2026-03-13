@@ -25,12 +25,10 @@ describe('ledger resolution in cli/signing', () => {
     const { resolveSigningAccount } = await import('../src/cli/signing')
     await resolveSigningAccount({
       ledger: true,
-      ledgerPath: "m/44'/60'/0'/0/9",
       ledgerAddress: '0x0000000000000000000000000000000000000002',
     })
 
     expect(mocks.createLedgerAccount).toHaveBeenCalledWith({
-      path: "m/44'/60'/0'/0/9",
       expectedAddress: '0x0000000000000000000000000000000000000002',
     })
   })
@@ -45,4 +43,3 @@ describe('ledger resolution in cli/signing', () => {
     expect(mocks.close).toHaveBeenCalledTimes(1)
   })
 })
-

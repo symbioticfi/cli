@@ -11,24 +11,32 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@ledgerhq/hw-transport-node-hid', () => ({
   default: {
-    create: mocks.createTransport,
+    default: {
+      create: mocks.createTransport,
+    },
   },
 }))
 
 vi.mock('@ledgerhq/hw-app-eth', () => ({
-  default: class EthMock {
-    constructor(_transport: unknown) {}
+  default: {
+    default: class EthMock {
+      constructor() {}
 
-    getAddress = mocks.getAddress
-    signPersonalMessage = mocks.signPersonalMessage
-    signTransaction = mocks.signTransaction
-    signEIP712HashedMessage = mocks.signEIP712HashedMessage
+      getAddress = mocks.getAddress
+      signPersonalMessage = mocks.signPersonalMessage
+      signTransaction = mocks.signTransaction
+      signEIP712HashedMessage = mocks.signEIP712HashedMessage
+    },
   },
 }))
 
 describe('createLedgerAccount', () => {
-  const path = "m/44'/60'/0'/0/0"
+  const defaultPath = "m/44'/60'/0'/0/0"
+  const ledgerLivePath = "m/44'/60'/7'/0/0"
+  const legacyPath = "m/44'/60'/0'/7"
   const ledgerAddress = '0x8ba1f109551bd432803012645ac136ddd64dba72'
+  const ledgerLiveAddress = '0x0000000000000000000000000000000000000007'
+  const legacyAddress = '0x0000000000000000000000000000000000000008'
 
   beforeEach(() => {
     vi.resetModules()
@@ -37,7 +45,11 @@ describe('createLedgerAccount', () => {
     mocks.createTransport.mockResolvedValue({
       close: mocks.closeTransport,
     })
-    mocks.getAddress.mockResolvedValue({ address: ledgerAddress })
+    mocks.getAddress.mockImplementation(async (path: string) => {
+      if (path === ledgerLivePath) return { address: ledgerLiveAddress }
+      if (path === legacyPath) return { address: legacyAddress }
+      return { address: ledgerAddress }
+    })
     mocks.signPersonalMessage.mockResolvedValue({
       r: '1'.padStart(64, '0'),
       s: '2'.padStart(64, '0'),
@@ -57,43 +69,66 @@ describe('createLedgerAccount', () => {
 
   it('creates a ledger-backed account and closes transport', async () => {
     const { createLedgerAccount } = await import('../src/core/signing/ledger')
-    const out = await createLedgerAccount({ path })
+    const out = await createLedgerAccount({})
 
     expect(out.address).toBe('0x8ba1f109551bD432803012645Ac136ddd64DBA72')
-    expect(mocks.getAddress).toHaveBeenCalledWith(path, false, false)
+    expect(mocks.getAddress).toHaveBeenCalledWith(defaultPath, false, false)
 
     await out.close()
     expect(mocks.closeTransport).toHaveBeenCalledTimes(1)
   })
 
-  it('fails when expected Ledger address mismatches and closes transport', async () => {
+  it('derives a Ledger Live account path from the expected address', async () => {
+    const { createLedgerAccount } = await import('../src/core/signing/ledger')
+    const { account, address } = await createLedgerAccount({
+      expectedAddress: ledgerLiveAddress,
+    })
+    const signer = account as any
+
+    expect(address).toBe('0x0000000000000000000000000000000000000007')
+
+    await signer.signMessage({ message: 'hello' })
+    expect(mocks.signPersonalMessage).toHaveBeenCalledWith(ledgerLivePath, '68656c6c6f')
+  })
+
+  it('derives a legacy Ledger path from the expected address', async () => {
+    const { createLedgerAccount } = await import('../src/core/signing/ledger')
+    const { account, address } = await createLedgerAccount({
+      expectedAddress: legacyAddress,
+    })
+    const signer = account as any
+
+    expect(address).toBe('0x0000000000000000000000000000000000000008')
+
+    await signer.signMessage({ message: 'hello' })
+    expect(mocks.signPersonalMessage).toHaveBeenCalledWith(legacyPath, '68656c6c6f')
+  })
+
+  it('fails when the expected Ledger address is not found and closes transport', async () => {
     const { createLedgerAccount } = await import('../src/core/signing/ledger')
 
-    await expect(
-      createLedgerAccount({
-        path,
-        expectedAddress: '0x0000000000000000000000000000000000000001',
-      }),
-    ).rejects.toThrow('Ledger address mismatch')
+    await expect(createLedgerAccount({ expectedAddress: '0x0000000000000000000000000000000000000001' })).rejects.toThrow(
+      'was not found in Ledger Ethereum derivation paths',
+    )
 
     expect(mocks.closeTransport).toHaveBeenCalledTimes(1)
   })
 
   it('uses Ledger methods for signMessage, signTransaction, signTypedData', async () => {
     const { createLedgerAccount } = await import('../src/core/signing/ledger')
-    const { account } = await createLedgerAccount({ path })
+    const { account } = await createLedgerAccount({})
     const signer = account as any
 
     const signedMessage = await signer.signMessage({ message: 'hello' })
     expect(signedMessage.startsWith('0x')).toBe(true)
-    expect(mocks.signPersonalMessage).toHaveBeenCalledWith(path, '68656c6c6f')
+    expect(mocks.signPersonalMessage).toHaveBeenCalledWith(defaultPath, '68656c6c6f')
 
     const serializer = vi.fn(async (_tx: unknown, sig?: unknown) =>
       sig ? '0xsigned-tx' : '0xunsigned-tx',
     )
     const signedTx = await signer.signTransaction({} as never, { serializer })
     expect(signedTx).toBe('0xsigned-tx')
-    expect(mocks.signTransaction).toHaveBeenCalledWith(path, 'unsigned-tx', null)
+    expect(mocks.signTransaction).toHaveBeenCalledWith(defaultPath, 'unsigned-tx', null)
     expect(serializer).toHaveBeenCalledTimes(2)
 
     const signedTypedData = await signer.signTypedData({
@@ -115,7 +150,7 @@ describe('createLedgerAccount', () => {
     expect(signedTypedData.startsWith('0x')).toBe(true)
     expect(mocks.signEIP712HashedMessage).toHaveBeenCalledTimes(1)
     const args = mocks.signEIP712HashedMessage.mock.calls[0]!
-    expect(args[0]).toBe(path)
+    expect(args[0]).toBe(defaultPath)
     expect((args[1] as string).length).toBe(64)
     expect((args[2] as string).length).toBe(64)
   })

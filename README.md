@@ -46,7 +46,7 @@ symb op list
 Write/signature commands require a signer:
 
 - `--private-key <hex>` (discouraged) or `SYMB_PRIVATE_KEY`.
-- Ledger: `--ledger` (optionally `--ledger-path`, `--ledger-address`).
+- Ledger: `--ledger` (optionally `--ledger-address` to derive the matching Ledger Ethereum path).
 
 Common env vars:
 
@@ -156,8 +156,7 @@ Signing (write + signature commands):
 
 - `--private-key <hex>` (discouraged; use `SYMB_PRIVATE_KEY`)
 - `--ledger`
-- `--ledger-path <path>`
-- `--ledger-address <address>`
+- `--ledger-address <address>`: derive the matching Ledger Ethereum derivation path for this address
 
 Write-only:
 

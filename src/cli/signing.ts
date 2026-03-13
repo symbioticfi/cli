@@ -3,7 +3,7 @@ import type { Account } from 'viem/accounts'
 
 import { readEnv } from '../config/env'
 import { accountFromPrivateKey } from '../core/signing/local'
-import { DEFAULT_LEDGER_PATH, type SigningFlags } from './signingOptions'
+import type { SigningFlags } from './signingOptions'
 import { parseAddress, parseBytes32Hex } from './parse'
 
 export async function resolveSigningAccount(
@@ -17,7 +17,6 @@ export async function resolveSigningAccount(
   if (flags.ledger) {
     const { createLedgerAccount } = await import('../core/signing/ledger')
     return createLedgerAccount({
-      path: flags.ledgerPath ?? DEFAULT_LEDGER_PATH,
       expectedAddress: flags.ledgerAddress ? parseAddress(flags.ledgerAddress) : undefined,
     })
   }
