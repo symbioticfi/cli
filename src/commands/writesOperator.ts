@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddressArg, parseUint48Arg } from '../cli/argParsers'
+import { defaultedArg, parseAddressArg, parseUint48Arg } from '../cli/argParsers'
 import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import {
@@ -161,11 +161,13 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       .command('opt-in-vault-sig')
       .description('Get a signature for opt-in to a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
-      .argument(
-        '[duration]',
-        'seconds until expiry (default 7 days)',
-        parseUint48Arg,
-        DEFAULT_SIG_DURATION_SECONDS,
+      .addArgument(
+        defaultedArg(
+          '[duration]',
+          'seconds until expiry',
+          parseUint48Arg,
+          DEFAULT_SIG_DURATION_SECONDS,
+        ),
       ),
   ).action((vault: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
@@ -213,11 +215,13 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       .command('opt-out-vault-sig')
       .description('Get a signature for opt-out from a vault.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
-      .argument(
-        '[duration]',
-        'seconds until expiry (default 7 days)',
-        parseUint48Arg,
-        DEFAULT_SIG_DURATION_SECONDS,
+      .addArgument(
+        defaultedArg(
+          '[duration]',
+          'seconds until expiry',
+          parseUint48Arg,
+          DEFAULT_SIG_DURATION_SECONDS,
+        ),
       ),
   ).action((vault: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
@@ -265,11 +269,13 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       .command('opt-in-net-sig')
       .description('Get a signature for opt-in to a network.')
       .argument('<network_address>', 'network address', parseAddressArg)
-      .argument(
-        '[duration]',
-        'seconds until expiry (default 7 days)',
-        parseUint48Arg,
-        DEFAULT_SIG_DURATION_SECONDS,
+      .addArgument(
+        defaultedArg(
+          '[duration]',
+          'seconds until expiry',
+          parseUint48Arg,
+          DEFAULT_SIG_DURATION_SECONDS,
+        ),
       ),
   ).action((net: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {
@@ -317,11 +323,13 @@ export function registerOperatorWriteCommands(program: Command, getCtx: () => Pr
       .command('opt-out-net-sig')
       .description('Get a signature for opt-out from a network.')
       .argument('<network_address>', 'network address', parseAddressArg)
-      .argument(
-        '[duration]',
-        'seconds until expiry (default 7 days)',
-        parseUint48Arg,
-        DEFAULT_SIG_DURATION_SECONDS,
+      .addArgument(
+        defaultedArg(
+          '[duration]',
+          'seconds until expiry',
+          parseUint48Arg,
+          DEFAULT_SIG_DURATION_SECONDS,
+        ),
       ),
   ).action((net: Address, dur: bigint, opts: SigningOptions) =>
     runCliAction(async () => {

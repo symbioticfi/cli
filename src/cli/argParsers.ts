@@ -1,4 +1,4 @@
-import { InvalidArgumentError } from 'commander'
+import { Argument, InvalidArgumentError } from 'commander'
 
 import {
   parseAddress,
@@ -18,6 +18,18 @@ function wrapParser<T>(fn: (value: string) => T): (value: string) => T {
       throw new InvalidArgumentError(message)
     }
   }
+}
+
+export function defaultedArg<T>(
+  flags: string,
+  description: string,
+  parser: (value: string) => T,
+  defaultValue: T,
+  defaultValueDescription = String(defaultValue),
+) {
+  return new Argument(flags, description)
+    .argParser(parser)
+    .default(defaultValue, defaultValueDescription)
 }
 
 export const parseAddressArg = wrapParser(parseAddress)

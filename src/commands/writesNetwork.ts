@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddressArg, parseUint256Arg, parseUint96Arg } from '../cli/argParsers'
+import { defaultedArg, parseAddressArg, parseUint256Arg, parseUint96Arg } from '../cli/argParsers'
 import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import { NetworkRegistryAbi, NetworkRestakeDelegatorAbi, VetoSlasherAbi } from '../core/contracts'
@@ -46,13 +46,14 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
         'maximum amount of stake a network is ready to get from the vault (wei)',
         parseUint256Arg,
       )
-      .argument('[subnetwork_id]', 'subnetwork id (default 0)', parseUint96Arg, 0n),
-  ).action((vaultAddress: Address, maxLimit: bigint, subnetworkId: bigint, opts: WriteOptions) =>
+      .addArgument(
+        defaultedArg('[subnetwork_id]', 'subnetwork id', parseUint96Arg, 0n),
+      ),
+  ).action((vaultAddress: Address, maxLimit: bigint, subnetId: bigint, opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
       const vault = vaultAddress
       const max = maxLimit
-      const subnetId = subnetworkId
 
       const delegator = await ctx.symb.getVaultDelegator(vault)
 
@@ -80,14 +81,15 @@ export function registerNetworkWriteCommands(program: Command, getCtx: () => Pro
       .description('Set a resolver for a subnetwork at VetoSlasher.')
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<resolver>', 'resolver address', parseAddressArg)
-      .argument('[subnetwork_id]', 'subnetwork id (default 0)', parseUint96Arg, 0n),
+      .addArgument(
+        defaultedArg('[subnetwork_id]', 'subnetwork id', parseUint96Arg, 0n),
+      ),
   ).action(
-    (vaultAddress: Address, resolverAddress: Address, subnetworkId: bigint, opts: WriteOptions) =>
+    (vaultAddress: Address, resolverAddress: Address, subnetId: bigint, opts: WriteOptions) =>
       runCliAction(async () => {
         const ctx = await getCtx()
         const vault = vaultAddress
         const resolver = resolverAddress
-        const subnetId = subnetworkId
 
         await withSigningAccount(opts, async ({ account, address: signer }) => {
           const slasher = await ctx.symb.getVaultSlasher(vault)

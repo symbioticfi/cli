@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddressArg, parseUint256Arg, parseUint96Arg } from '../cli/argParsers'
+import { defaultedArg, parseAddressArg, parseUint256Arg, parseUint96Arg } from '../cli/argParsers'
 import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
 import { formatPercent } from '../core/format'
@@ -25,7 +25,7 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
       .argument('<vault_address>', 'vault address', parseAddressArg)
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<limit>', 'limit (wei)', parseUint256Arg)
-      .argument('[subnetwork_id]', 'subnetwork id (default 0)', parseUint96Arg, 0n),
+      .addArgument(defaultedArg('[subnetwork_id]', 'subnetwork id', parseUint96Arg, 0n)),
   ).action((vault: Address, net: Address, lim: bigint, subnetId: bigint, opts: WriteOptions) =>
     runCliAction(async () => {
       const ctx = await getCtx()
@@ -65,16 +65,9 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<operator_address>', 'operator address', parseAddressArg)
       .argument('<limit>', 'limit (wei)', parseUint256Arg)
-      .argument('[subnetwork_id]', 'subnetwork id (default 0)', parseUint96Arg, 0n),
+      .addArgument(defaultedArg('[subnetwork_id]', 'subnetwork id', parseUint96Arg, 0n)),
   ).action(
-    (
-      vault: Address,
-      net: Address,
-      op: Address,
-      lim: bigint,
-      subnetId: bigint,
-      opts: WriteOptions,
-    ) =>
+    (vault: Address, net: Address, op: Address, lim: bigint, subnetId: bigint, opts: WriteOptions) =>
       runCliAction(async () => {
         const ctx = await getCtx()
 
@@ -113,7 +106,7 @@ export function registerCuratorWriteCommands(program: Command, getCtx: () => Pro
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<operator_address>', 'operator address', parseAddressArg)
       .argument('<shares>', 'shares (uint256)', parseUint256Arg)
-      .argument('[subnetwork_id]', 'subnetwork id (default 0)', parseUint96Arg, 0n),
+      .addArgument(defaultedArg('[subnetwork_id]', 'subnetwork id', parseUint96Arg, 0n)),
   ).action(
     (vault: Address, net: Address, op: Address, sh: bigint, subnetId: bigint, opts: WriteOptions) =>
       runCliAction(async () => {

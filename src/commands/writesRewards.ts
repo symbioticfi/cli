@@ -2,7 +2,7 @@ import type { Command } from 'commander'
 import type { Address } from 'viem'
 
 import type { CliContext } from '../cli/context'
-import { parseAddressArg, parseUint256Arg } from '../cli/argParsers'
+import { defaultedArg, parseAddressArg, parseUint256Arg } from '../cli/argParsers'
 import { parseHex, parseUint256 } from '../cli/parse'
 import { withSigningAccount } from '../cli/signing'
 import { runCliAction } from '../cli/run'
@@ -10,6 +10,9 @@ import { CuratorRegistryAbi, FeeRegistryAbi, VaultSnapshotRewardsAbi } from '../
 import { runWriteTx } from '../core/tx'
 
 import { withWriteOptions, type WriteOptions } from './writeOptions'
+
+const DEFAULT_FIRST_REWARD_TO_CLAIM = 0n
+const DEFAULT_MAX_REWARDS = 1_000_000n
 
 export function registerRewardsWriteCommands(program: Command, getCtx: () => Promise<CliContext>) {
   // CuratorRegistry
@@ -176,17 +179,21 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<token>', 'ERC20 token address', parseAddressArg)
       .argument('[recipient]', 'recipient address (default: signer)', parseAddressArg)
-      .argument(
-        '[first_reward_to_claim]',
-        'first reward index to claim (default 0)',
-        parseUint256Arg,
-        0n,
+      .addArgument(
+        defaultedArg(
+          '[first_reward_to_claim]',
+          'first reward index to claim',
+          parseUint256Arg,
+          DEFAULT_FIRST_REWARD_TO_CLAIM,
+        ),
       )
-      .argument(
-        '[max_rewards]',
-        'max rewards to claim (default 1000000)',
-        parseUint256Arg,
-        1_000_000n,
+      .addArgument(
+        defaultedArg(
+          '[max_rewards]',
+          'max rewards to claim',
+          parseUint256Arg,
+          DEFAULT_MAX_REWARDS,
+        ),
       )
       .option('--last-unclaimed <n>', 'Override lastUnclaimedReward (uint256)'),
   ).action(
@@ -240,17 +247,21 @@ export function registerRewardsWriteCommands(program: Command, getCtx: () => Pro
       .argument('<network_address>', 'network address', parseAddressArg)
       .argument('<token>', 'ERC20 token address', parseAddressArg)
       .argument('[recipient]', 'recipient address (default: signer)', parseAddressArg)
-      .argument(
-        '[first_reward_to_claim]',
-        'first reward index to claim (default 0)',
-        parseUint256Arg,
-        0n,
+      .addArgument(
+        defaultedArg(
+          '[first_reward_to_claim]',
+          'first reward index to claim',
+          parseUint256Arg,
+          DEFAULT_FIRST_REWARD_TO_CLAIM,
+        ),
       )
-      .argument(
-        '[max_rewards]',
-        'max rewards to claim (default 1000000)',
-        parseUint256Arg,
-        1_000_000n,
+      .addArgument(
+        defaultedArg(
+          '[max_rewards]',
+          'max rewards to claim',
+          parseUint256Arg,
+          DEFAULT_MAX_REWARDS,
+        ),
       )
       .option('--last-unclaimed <n>', 'Override lastUnclaimedOperatorReward (uint256)')
       .option('--extra-data <hex>', 'Extra data (abi-encoded hints) (optional)', '0x'),
