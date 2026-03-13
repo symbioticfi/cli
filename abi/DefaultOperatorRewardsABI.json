@@ -11,16 +11,12 @@
     "type": "constructor"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "target", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "target", "type": "address" }],
     "name": "AddressEmptyCode",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "AddressInsufficientBalance",
     "type": "error"
   },
@@ -35,9 +31,7 @@
   { "inputs": [], "name": "ReentrancyGuardReentrantCall", "type": "error" },
   { "inputs": [], "name": "RootNotSet", "type": "error" },
   {
-    "inputs": [
-      { "internalType": "address", "name": "token", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "token", "type": "address" }],
     "name": "SafeERC20FailedOperation",
     "type": "error"
   },
@@ -135,9 +129,7 @@
       { "internalType": "address", "name": "token", "type": "address" }
     ],
     "name": "balance",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -154,9 +146,7 @@
       { "internalType": "bytes32[]", "name": "proof", "type": "bytes32[]" }
     ],
     "name": "claimRewards",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -167,9 +157,7 @@
       { "internalType": "address", "name": "account", "type": "address" }
     ],
     "name": "claimed",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -198,9 +186,7 @@
       { "internalType": "address", "name": "token", "type": "address" }
     ],
     "name": "root",
-    "outputs": [
-      { "internalType": "bytes32", "name": "value", "type": "bytes32" }
-    ],
+    "outputs": [{ "internalType": "bytes32", "name": "value", "type": "bytes32" }],
     "stateMutability": "view",
     "type": "function"
   }

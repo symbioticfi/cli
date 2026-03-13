@@ -1,0 +1,13 @@
+import { z } from 'zod'
+
+const envSchema = z.object({
+  SYMB_RPC_URL: z.url().optional(),
+  SYMB_PRIVATE_KEY: z.string().optional(),
+})
+
+export type SymbEnv = z.infer<typeof envSchema>
+
+export function readEnv(): SymbEnv {
+  // Don’t throw on unrelated env vars.
+  return envSchema.parse(process.env)
+}

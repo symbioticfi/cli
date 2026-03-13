@@ -1,8 +1,6 @@
 [
   {
-    "inputs": [
-      { "internalType": "address", "name": "collateral", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "collateral", "type": "address" }],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
@@ -83,9 +81,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "requestId", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "requestId", "type": "uint256" }],
     "name": "triggerBurn",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -94,9 +90,7 @@
   {
     "inputs": [],
     "name": "triggerWithdrawal",
-    "outputs": [
-      { "internalType": "uint256", "name": "requestId", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "requestId", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },

@@ -1,16 +1,12 @@
 [
   { "inputs": [], "stateMutability": "nonpayable", "type": "constructor" },
   {
-    "inputs": [
-      { "internalType": "address", "name": "target", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "target", "type": "address" }],
     "name": "AddressEmptyCode",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "AddressInsufficientBalance",
     "type": "error"
   },
@@ -26,16 +22,12 @@
   { "inputs": [], "name": "NotInitializing", "type": "error" },
   { "inputs": [], "name": "NotReady", "type": "error" },
   {
-    "inputs": [
-      { "internalType": "address", "name": "owner", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
     "name": "OwnableInvalidOwner",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "OwnableUnauthorizedAccount",
     "type": "error"
   },
@@ -48,9 +40,7 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "token", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "token", "type": "address" }],
     "name": "SafeERC20FailedOperation",
     "type": "error"
   },
@@ -229,9 +219,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "network", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "network", "type": "address" }],
     "name": "acceptNetworkReceiver",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -248,13 +236,9 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "receiver", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "receiver", "type": "address" }],
     "name": "balanceOf",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -268,18 +252,14 @@
   {
     "inputs": [],
     "name": "delay",
-    "outputs": [
-      { "internalType": "uint48", "name": "value", "type": "uint48" }
-    ],
+    "outputs": [{ "internalType": "uint48", "name": "value", "type": "uint48" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "globalReceiver",
-    "outputs": [
-      { "internalType": "address", "name": "value", "type": "address" }
-    ],
+    "outputs": [{ "internalType": "address", "name": "value", "type": "address" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -357,13 +337,9 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "network", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "network", "type": "address" }],
     "name": "networkReceiver",
-    "outputs": [
-      { "internalType": "address", "name": "value", "type": "address" }
-    ],
+    "outputs": [{ "internalType": "address", "name": "value", "type": "address" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -385,9 +361,7 @@
       { "internalType": "address", "name": "operator", "type": "address" }
     ],
     "name": "operatorNetworkReceiver",
-    "outputs": [
-      { "internalType": "address", "name": "value", "type": "address" }
-    ],
+    "outputs": [{ "internalType": "address", "name": "value", "type": "address" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -419,9 +393,7 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "network", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "network", "type": "address" }],
     "name": "pendingNetworkReceiver",
     "outputs": [
       { "internalType": "address", "name": "value", "type": "address" },
@@ -451,18 +423,14 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "uint48", "name": "newDelay", "type": "uint48" }
-    ],
+    "inputs": [{ "internalType": "uint48", "name": "newDelay", "type": "uint48" }],
     "name": "setDelay",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "receiver", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "receiver", "type": "address" }],
     "name": "setGlobalReceiver",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -490,22 +458,16 @@
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "newOwner", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
     "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "receiver", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "receiver", "type": "address" }],
     "name": "triggerTransfer",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   }

@@ -164,9 +164,7 @@
       { "internalType": "address", "name": "operator", "type": "address" }
     ],
     "name": "latestSlashedCaptureTimestamp",
-    "outputs": [
-      { "internalType": "uint48", "name": "value", "type": "uint48" }
-    ],
+    "outputs": [{ "internalType": "uint48", "name": "value", "type": "uint48" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -183,9 +181,7 @@
       { "internalType": "bytes", "name": "hints", "type": "bytes" }
     ],
     "name": "slash",
-    "outputs": [
-      { "internalType": "uint256", "name": "slashedAmount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "slashedAmount", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -201,9 +197,7 @@
       { "internalType": "bytes", "name": "hints", "type": "bytes" }
     ],
     "name": "slashableStake",
-    "outputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
