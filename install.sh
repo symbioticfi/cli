@@ -9,7 +9,7 @@ SYMB_BIN_DIR="$SYMB_DIR/bin"
 SYMB_CLI_DIR="$SYMB_DIR/cli"
 
 SYMB_REPO="${SYMB_REPO:-"symbioticfi/cli"}"
-SYMB_REF="${SYMB_REF:-"ts"}" # TODO
+SYMB_REF="${SYMB_REF:-"main"}"
 ARCHIVE_URL="${SYMB_ARCHIVE_URL:-"https://codeload.github.com/$SYMB_REPO/tar.gz/refs/heads/$SYMB_REF"}"
 
 for cmd in curl tar node; do
